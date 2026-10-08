@@ -1,0 +1,31 @@
+exec(open('pal.py').read())
+import json,numpy as np
+# GRAFICO A SCALA: dal migliore al peggiore, con la scala delle ore
+T=json.load(open('tre.json'))
+K=sorted(T,key=lambda k:T[k][0])
+f,ax=plt.subplots(figsize=(6.2,3.6)); ax.set_facecolor(BG)
+for s in ['top','right','left']: ax.spines[s].set_visible(False)
+ax.spines['bottom'].set_color('#9ca3af')
+ax.tick_params(colors=SOFT,length=0)
+for i,k in enumerate(K):
+    v,n=T[k]
+    y=len(K)-1-i
+    c=VER if v<-.5 else (ROS if v>1.5 else '#9ca3af')
+    ax.plot([0,v],[y,y],color=c,lw=2.2,alpha=.5,zorder=1)
+    ax.scatter([v],[y],s=130,color=c,zorder=3)
+    ax.text(v+(.22 if v>0 else -.22),y,f"{v:+.1f}h",ha='left' if v>0 else 'right',va='center',fontsize=9,color=c,fontweight='bold',zorder=4)
+    a,b=k.split('+')
+    ax.text(-4.5,y,f"{a} → {b}",fontsize=9.5,va='center',ha='left',color=INK)
+    ax.text(4.3,y,f"{n}",fontsize=8,va='center',ha='right',color=SOFT)
+ax.axvline(0,color=INK,lw=1.4,zorder=2)
+ax.set_yticks([]); ax.set_ylim(-.8,len(K)-.2); ax.set_xlim(-4.7,4.5)
+ax.set_xticks([-3,-2,-1,0,1,2,3])
+ax.set_xticklabels(['−3h','−2h','−1h','0','+1h','+2h','+3h'],fontsize=9.5)
+ax.grid(axis='x',color=GRID,lw=.8)
+ax.set_xlabel("di quanto slitti il giorno dopo",fontsize=10.5,fontweight='bold',labelpad=8)
+ax.text(-2.4,len(K)-.35,"RECUPERI",fontsize=10,color=VER,fontweight='bold',ha='center')
+ax.text(2.4,len(K)-.35,"PEGGIORI",fontsize=10,color=ROS,fontweight='bold',ha='center')
+ax.text(4.3,len(K)-.35,"volte",fontsize=8,color=SOFT,ha='right')
+f.subplots_adjust(left=.02,right=.98,top=.90,bottom=.16)
+salva(f,'classifica')
+print("ok")

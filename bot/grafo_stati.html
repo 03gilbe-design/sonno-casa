@@ -1,0 +1,458 @@
+<title>Grafo dei guasti del sonno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,email@example.com,600;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a sinistra il grafo a colonne (cause -> dispositivi -> funzioni -> per te), a destra il pannello della cascata; su telefono uno sotto l'altro */
+:root {
+  --bg: #F3F2F7; --surface: #FFFFFF; --ink: #1D1B2E; --muted: #5E5A78; --line: #C9C6DA;
+  --accent: #3D3A8C;          /* notte, indaco */
+  --ok: #1F7A53; --ok-bg: #DDF1E7;
+  --warn: #9A6200; --warn-bg: #FBEBCB;
+  --bad: #B3261E; --bad-bg: #F8DCD9;
+  --hole: #6B2FA3; --hole-bg: #EADCF7;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12111C; --surface: #1C1A2B; --ink: #ECEAF6; --muted: #A6A2C4; --line: #3A3755;
+  --accent: #A9A5FF; --ok: #5FD39C; --ok-bg: #173527; --warn: #F2B544; --warn-bg: #3A2C10;
+  --bad: #FF8A80; --bad-bg: #42191A; --hole: #D2A6FF; --hole-bg: #2F1C45; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12111C; --surface: #1C1A2B; --ink: #ECEAF6; --muted: #A6A2C4; --line: #3A3755;
+  --accent: #A9A5FF; --ok: #5FD39C; --ok-bg: #173527; --warn: #F2B544; --warn-bg: #3A2C10;
+  --bad: #FF8A80; --bad-bg: #42191A; --hole: #D2A6FF; --hole-bg: #2F1C45; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+.wrap { padding-inline: 16px; padding-block: 20px 40px; max-width: 1280px; margin: 0 auto; display: grid; gap: 16px; }
+header h1 { font: 700 clamp(1.4rem, 3vw, 2rem)/1.15 var(--display); margin: 0; text-wrap: balance; }
+header p { margin: 6px 0 0; color: var(--muted); max-width: 70ch; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bar button { font: 600 13px var(--body); border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.bar button:hover, .bar button:focus-visible { border-color: var(--accent); outline: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 1.5px solid; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 380px); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.graph { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+svg { display: block; }
+.col-title { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; fill: var(--muted); }
+.edge { stroke: var(--line); stroke-width: 1.4; fill: none; }
+.edge.hot { stroke: var(--bad); stroke-width: 2; }
+.edge.alt { stroke-dasharray: 4 3; }
+.node rect { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; rx: 7; }
+.node text { font: 600 12.5px var(--body); fill: var(--ink); pointer-events: none; }
+.node .st { font: 600 10px var(--mono); fill: var(--muted); }
+.node { cursor: pointer; }
+.node:focus-visible rect { stroke: var(--accent); stroke-width: 3; outline: none; }
+.node.rotto rect { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 2.5; }
+.node.giu rect { fill: var(--bad-bg); stroke: var(--bad); }
+.node.riserva rect { fill: var(--warn-bg); stroke: var(--warn); }
+.node.\? rect { fill: var(--bg); stroke: var(--muted); stroke-dasharray: 2 3; }
+.node .ic { color: var(--muted); } .node.giu .ic, .node.rotto .ic { color: var(--bad); } .node.riserva .ic { color: var(--warn); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs button { font: 700 14px var(--display); background: none; border: 0; border-bottom: 3px solid transparent; color: var(--muted); padding: 8px 14px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pnode rect { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; rx: 18; }
+.pnode text { font: 600 12.5px var(--body); fill: var(--ink); pointer-events: none; }
+.pnode .st { font: 600 10px var(--mono); fill: var(--muted); }
+.pnode { cursor: pointer; } .pnode:focus-visible rect { stroke: var(--accent); stroke-width: 3; outline: none; }
+.pnode.zona0 rect { fill: color-mix(in srgb, var(--warn) 34%, var(--surface)); } .pnode.zona1 rect { fill: color-mix(in srgb, var(--warn) 16%, var(--surface)); }
+.pnode.zona2 rect { fill: var(--surface); } .pnode.zona3 rect { fill: color-mix(in srgb, var(--accent) 16%, var(--surface)); } .pnode.zona4 rect { fill: color-mix(in srgb, var(--accent) 32%, var(--surface)); }
+.src { font: 11px var(--mono); color: var(--muted); }
+.pnode.scelto rect { fill: var(--accent); }
+.pnode.solo_doc rect { stroke: var(--hole); stroke-dasharray: 5 3; }
+.pnode.in_parte rect { stroke: var(--warn); }
+.pnode.scelto rect { fill: var(--accent); } .pnode.scelto text { fill: var(--surface); }
+.pnode.vicino rect { stroke: var(--accent); stroke-width: 2.5; }
+.tr { stroke: var(--line); stroke-width: 1.4; fill: none; marker-end: url(#freccia); }
+.tr.hot { stroke: var(--accent); stroke-width: 2.2; }
+.node.rischio rect { stroke: var(--hole); stroke-dasharray: 5 3; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.panel h2 { font: 700 1.15rem/1.2 var(--display); margin: 0; }
+.panel .hint { color: var(--muted); margin: 0; }
+.eff { display: grid; gap: 10px; }
+.card { border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 6px; padding: 10px 12px; display: grid; gap: 4px; min-width: 0; }
+.card.giu { border-left-color: var(--bad); } .card.riserva { border-left-color: var(--warn); } .card.rotto { border-left-color: var(--bad); background: var(--bad-bg); }
+.card b { font-family: var(--display); font-size: 1rem; }
+.kv { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 2px 8px; font-size: 13.5px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; }
+.pill { font: 600 11px var(--mono); padding: 2px 8px; border-radius: 999px; justify-self: start; }
+.pill.ok { color: var(--ok); background: var(--ok-bg); } .pill.parz { color: var(--warn); background: var(--warn-bg); } .pill.buco { color: var(--hole); background: var(--hole-bg); }
+.risks h2 { font: 700 1.15rem var(--display); margin: 0 0 8px; }
+.risks { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.risks ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; max-width: 95ch; }
+.risks li span { font-family: var(--mono); font-size: 12px; color: var(--hole); }
+@media (prefers-reduced-motion: no-preference) { .node rect, .edge { transition: fill .2s, stroke .2s; } }
+.righe { display: grid; gap: 6px; }
+.riga { display: grid; grid-template-columns: minmax(0, 1fr) 3.4em 6.5em 7.5em; gap: 8px; align-items: center; font-size: 13.5px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+@media (max-width: 560px) { .riga { grid-template-columns: minmax(0, 1fr) 3.4em; } .riga .vita, .riga .fa { grid-column: span 1; } }
+.riga label { display: inline-flex; gap: 6px; align-items: center; }
+.riga input[type=number] { width: 4em; font: 13px var(--mono); background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; }
+.peso { font: 600 13px var(--mono); text-align: right; font-variant-numeric: tabular-nums; } .peso.pos { color: var(--warn); } .peso.neg { color: var(--accent); }
+.vita { font: 12px var(--mono); color: var(--muted); }
+#scala .zona { stroke: var(--surface); stroke-width: 2; } #scala .z0 { fill: var(--accent); opacity: .55; } #scala .z1 { fill: var(--accent); opacity: .28; }
+#scala .z2 { fill: var(--line); } #scala .z3 { fill: var(--warn); opacity: .28; } #scala .z4 { fill: var(--warn); opacity: .55; }
+#scala .zt { font: 600 12px var(--body); fill: var(--ink); } #scala .tick { font: 11px var(--mono); fill: var(--muted); }
+#scala .soglia { stroke: var(--muted); stroke-dasharray: 3 3; } #scala .ago { stroke: var(--bad); stroke-width: 3; } #scala .agot { font: 700 12px var(--mono); fill: var(--bad); }
+.dett { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: 13.5px; } .dett .ign { color: var(--muted); }
+.tabwrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 760px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+td.sig { font: 12px var(--mono); color: var(--muted); }
+td button { font: 600 12px var(--body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+td button:hover, td button:focus-visible { border-color: var(--accent); outline: none; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Cosa si rompe se si rompe questo</h1>
+    <p>Due grafi: i pezzi del sistema e i tuoi stati. Tocca un nodo per vedere la cascata o le transizioni. Stato al 04/10/2026.</p>
+  </header>
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" id="tabS" aria-selected="true" aria-controls="vistaS">Sistema</button>
+    <button type="button" role="tab" id="tabT" aria-selected="false" aria-controls="vistaT">Tu</button>
+    <button type="button" role="tab" id="tabG" aria-selected="false" aria-controls="vistaG">Segnali</button>
+    <button type="button" role="tab" id="tabC" aria-selected="false" aria-controls="vistaC">Scenari</button>
+  </div>
+  <section id="vistaT" hidden>
+    <div class="bar"><div class="legend">
+      <span><i class="sw" style="border-color:var(--line)"></i>nel codice</span>
+      <span><i class="sw" style="border-color:var(--warn)"></i>in parte</span>
+      <span><i class="sw" style="border-color:var(--hole);border-style:dashed"></i>solo nel documento: il sistema non lo usa</span>
+    </div></div>
+    <div class="main">
+      <div class="graph"><svg id="gp" role="img" aria-label="Grafo dei tuoi stati, dal sveglio al sonno"></svg></div>
+      <aside class="panel" aria-live="polite">
+        <h2 id="ptT">Tocca uno stato</h2>
+        <p class="hint" id="phT">Da sinistra (sveglio) a destra (sonno). Le frecce sono i passaggi possibili. Fonte: analisi/STATI_ATOMICI.md.</p>
+        <div class="eff" id="effT"></div>
+      </aside>
+    </div>
+  </section>
+  <section id="vistaG" hidden>
+    <div class="main">
+      <div class="panel">
+        <h2>Come si combinano i segnali</h2>
+        <p class="hint" id="scenS">Accendi i segnali e scegli quanti minuti fa sono arrivati. Pesi e mezze vite sono quelli veri di analisi/albero.py.</p>
+        <div id="righeS" class="righe"></div>
+      </div>
+      <aside class="panel" aria-live="polite">
+        <h2 id="esitoS">Stato stimato: ?</h2>
+        <div class="graph"><svg id="scala" viewBox="0 0 640 120" width="640" height="120" role="img" aria-label="Scala del punteggio da dorme a sveglio"></svg></div>
+        <ul id="dettS" class="dett"></ul>
+        <p class="hint">Regole: ogni peso si dimezza dopo la sua mezza vita; Sleep as Android sonno e respiro non contano se PC o A56 sono usati; due prove forti opposte nello stesso momento danno "? conflitto", altrimenti vince la più recente.</p>
+      </aside>
+    </div>
+  </section>
+  <section id="vistaC" hidden>
+    <div class="panel">
+      <h2>Scenari previsti</h2>
+      <p class="hint">Da analisi/SCENARI.md: ogni scenario ha un test in analisi/test_albero.py (tutti verdi al 04/10). "Prova" carica i suoi segnali nella scheda Segnali.</p>
+      <div class="tabwrap"><table>
+        <thead><tr><th>#</th><th>Situazione</th><th>Segnali</th><th>Stato atteso</th><th>Limite</th><th>Test</th><th></th></tr></thead>
+        <tbody id="tabScen"></tbody>
+      </table></div>
+    </div>
+  </section>
+  <section id="vistaS">
+  <div class="bar">
+    <button type="button" id="reset">Tutto funzionante</button>
+    <button type="button" id="es1">Esempio: Wi-Fi dell'A21s cade</button>
+    <button type="button" id="es2">Esempio: A56 bloccato e scarico</button>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--bad-bg);border-color:var(--bad)"></i>giù</span>
+      <span><i class="sw" style="background:var(--warn-bg);border-color:var(--warn)"></i>regge con una riserva</span>
+      <span><i class="sw" style="border-color:var(--hole);border-style:dashed"></i>rischio previsto, non ancora coperto</span>
+    </div>
+  </div>
+  <div class="main">
+    <div class="graph"><svg id="g" role="img" aria-label="Grafo delle dipendenze del sistema sonno"></svg></div>
+    <aside class="panel" aria-live="polite">
+      <h2 id="ptitle">Nessun guasto</h2>
+      <p class="hint" id="phint">Scegli un nodo nel grafo o un esempio qui sopra.</p>
+      <div class="eff" id="eff"></div>
+    </aside>
+  </div>
+  <section class="risks">
+    <h2>Rischi previsti ma non ancora coperti</h2>
+    <ul id="risks"></ul>
+  </section>
+  </section>
+</div>
+
+<script>
+// Lucide v0.469.0 (ISC), icone monocolore incorporate
+const ICONE = {"audio-lines": "<path d=\"M2 10v3\" /> <path d=\"M6 6v11\" /> <path d=\"M10 3v18\" /> <path d=\"M14 8v7\" /> <path d=\"M18 5v13\" /> <path d=\"M22 10v3\" />", "battery-charging": "<path d=\"M15 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2\" /> <path d=\"M6 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h1\" /> <path d=\"m11 7-3 5h4l-3 5\" /> <line x1=\"22\" x2=\"22\" y1=\"11\" y2=\"13\" />", "bell": "<path d=\"M10.268 21a2 2 0 0 0 3.464 0\" /> <path d=\"M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326\" />", "bot": "<path d=\"M12 8V4H8\" /> <rect width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\" /> <path d=\"M2 14h2\" /> <path d=\"M20 14h2\" /> <path d=\"M15 13v2\" /> <path d=\"M9 13v2\" />", "chart-line": "<path d=\"M3 3v16a2 2 0 0 0 2 2h16\" /> <path d=\"m19 9-5 5-4-4-3 3\" />", "clock": "<circle cx=\"12\" cy=\"12\" r=\"10\" /> <polyline points=\"12 6 12 12 16 14\" />", "cloud": "<path d=\"M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z\" />", "cpu": "<rect width=\"16\" height=\"16\" x=\"4\" y=\"4\" rx=\"2\" /> <rect width=\"6\" height=\"6\" x=\"9\" y=\"9\" rx=\"1\" /> <path d=\"M15 2v2\" /> <path d=\"M15 20v2\" /> <path d=\"M2 15h2\" /> <path d=\"M2 9h2\" /> <path d=\"M20 15h2\" /> <path d=\"M20 9h2\" /> <path d=\"M9 2v2\" /> <path d=\"M9 20v2\" />", "hard-drive": "<line x1=\"22\" x2=\"2\" y1=\"12\" y2=\"12\" /> <path d=\"M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z\" /> <line x1=\"6\" x2=\"6.01\" y1=\"16\" y2=\"16\" /> <line x1=\"10\" x2=\"10.01\" y1=\"16\" y2=\"16\" />", "lock": "<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /> <path d=\"M7 11V7a5 5 0 0 1 10 0v4\" />", "mic": "<path d=\"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z\" /> <path d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /> <line x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\" />", "monitor": "<rect width=\"20\" height=\"14\" x=\"2\" y=\"3\" rx=\"2\" /> <line x1=\"8\" x2=\"16\" y1=\"21\" y2=\"21\" /> <line x1=\"12\" x2=\"12\" y1=\"17\" y2=\"21\" />", "moon": "<path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\" />", "router": "<rect width=\"20\" height=\"8\" x=\"2\" y=\"14\" rx=\"2\" /> <path d=\"M6.01 18H6\" /> <path d=\"M10.01 18H10\" /> <path d=\"M15 10v4\" /> <path d=\"M17.84 7.17a4 4 0 0 0-5.66 0\" /> <path d=\"M20.66 4.34a8 8 0 0 0-11.31 0\" />", "shield-check": "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" /> <path d=\"m9 12 2 2 4-4\" />", "smartphone": "<rect width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path d=\"M12 18h.01\" />", "tag": "<path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\" /> <circle cx=\"7.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />", "terminal": "<polyline points=\"4 17 10 11 4 5\" /> <line x1=\"12\" x2=\"20\" y1=\"19\" y2=\"19\" />", "timer-reset": "<path d=\"M10 2h4\" /> <path d=\"M12 14v-4\" /> <path d=\"M4 13a8 8 0 0 1 8-7 8 8 0 1 1-5.3 14L4 17.6\" /> <path d=\"M9 17H4v5\" />", "wifi": "<path d=\"M12 20h.01\" /> <path d=\"M2 8.82a15 15 0 0 1 20 0\" /> <path d=\"M5 12.859a10 10 0 0 1 14 0\" /> <path d=\"M8.5 16.429a5 5 0 0 1 7 0\" />"};
+const IC = {wifi_casa:"router", risparmio:"battery-charging", ip_a21:"router", carica_a21:"battery-charging", termux:"terminal",
+  carica_a56:"battery-charging", sblocco_a56:"lock", pc:"monitor", disco_pc:"hard-drive", drive:"cloud", kaggle:"cpu", telegram:"bot",
+  wifi_a21:"wifi", crond:"timer-reset", sshd:"terminal", spazio_a21:"hard-drive", mic_a21:"mic", reg_a56:"smartphone", reg_pc:"monitor",
+  reg_a21:"audio-lines", raggiungibile:"wifi", bot:"bot", guardiano:"shield-check", notte:"moon", archivio:"cloud", avvisi:"bell",
+  scheda:"moon", kaggle_an:"chart-line", miniapp:"tag", dati:"chart-line", ora_legale:"clock"};
+function icona(p, x, y, nome){ if(!ICONE[nome]) return; const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+  g.setAttribute("class","ic"); g.setAttribute("transform",`translate(${x},${y}) scale(0.83)`); g.setAttribute("fill","none");
+  g.setAttribute("stroke","currentColor"); g.setAttribute("stroke-width","2"); g.setAttribute("stroke-linecap","round"); g.setAttribute("stroke-linejoin","round");
+  g.innerHTML = ICONE[nome]; p.appendChild(g); }
+// stato: ok = coperto e provato, parz = coperto in parte, buco = da fare
+// dip = serve TUTTO; alt = basta UNO (riserve)
+const N = [
+  // colonna 0: cause
+  {id:"wifi_casa", c:0, t:"Router di casa", ril:"ping dal telefono e dal PC", solo:"niente (fuori dal nostro controllo)", avv:"A21s irraggiungibile dopo 10'", st:"parz"},
+  {id:"risparmio", c:0, t:"Risparmio energetico A21s", ril:"guardiano: settings low_power via adb", solo:"lo spegne a ogni giro (riaccendeva i dati in background)", avv:"no", st:"ok"},
+  {id:"ip_a21", c:0, t:"IP dell'A21s (casa o hotspot PC)", ril:"a21.ip(): prova .182 e l'hotspot del PC", solo:"ogni script usa a21.ip()", avv:"tramite 'irraggiungibile'", st:"ok"},
+  {id:"riavvio_a21", c:0, t:"Riavvio A21s (aggiornamenti)", ril:"uptime / sys.boot.reason", solo:"Termux:Boot riparte; rec.sh prova il mic", avv:"no (da spegnere: download automatico)", st:"parz", rischio:true},
+  {id:"batt_a56", c:0, t:"Risparmio batteria A56 (Doze)", ril:"deviceidle whitelist", solo:"Termux escluso (06/10)", avv:"no", st:"ok"},
+  {id:"carica_a21", c:0, t:"Carica A21s", ril:"termux-battery-status", solo:"previsione: a che ora si spegne", avv:"sera <70% scollegato; batteria bassa di notte", st:"ok"},
+  {id:"termux", c:0, t:"Termux + wake-lock A21s", ril:"Termux:Boot al riavvio", solo:"boot_start.sh; wake-lock rinnovato ogni minuto", avv:"tramite 'A21s irraggiungibile'", st:"ok"},
+  {id:"carica_a56", c:0, t:"Carica A56", ril:"dumpsys battery", solo:"previsione batteria", avv:"sera: 'non in carica'; 'si spegne verso HH:MM'", st:"ok"},
+  {id:"sblocco_a56", c:0, t:"A56 sbloccato la sera", ril:"bloccato_a56 (adb)", solo:"appena sbloccato dopo le 21 avvia la registrazione", avv:"'sblocca l'A56 per 10 secondi' (max 1/30')", st:"parz"},
+  {id:"pc", c:0, t:"PC acceso", ril:"-", solo:"attività pianificate di Windows", avv:"se è spento non avvisa nessuno", st:"parz"},
+  {id:"disco_pc", c:0, t:"Disco C del PC", ril:"guardiano: spazio libero", solo:"sotto 3 GB libera copie già su Drive", avv:"sotto 1,5 GB", st:"ok"},
+  {id:"drive", c:0, t:"Google Drive (rclone)", ril:"rclone lsf/about", solo:"riprova al giro dopo", avv:"no", st:"parz"},
+  {id:"kaggle", c:0, t:"Kaggle (GPU, 30 h/sett.)", ril:"esito del kernel", solo:"3 tentativi, poi analisi del PC", avv:"al 3° fallimento", st:"ok"},
+  {id:"telegram", c:0, t:"Telegram", ril:"errori di rete nel bot", solo:"riprova", avv:"no", st:"parz"},
+  // colonna 1: dispositivi e servizi
+  {id:"wifi_a21", c:1, t:"Wi-Fi dell'A21s", dip:["wifi_casa","risparmio","ip_a21"], ril:"tieni_wifi.sh: ping ogni 10 s", solo:"dopo ~1' senza rete spegne e riaccende il Wi-Fi", avv:"il PC dopo 10'", st:"parz"},
+  {id:"crond", c:1, t:"Controllo ogni minuto (cron)", dip:["termux"], ril:"pgrep crond", solo:"boot_start lo avvia", avv:"no", st:"ok"},
+  {id:"sshd", c:1, t:"SSH dell'A21s", dip:["termux","crond"], ril:"il PC si collega", solo:"rec_guard lo rilancia ogni minuto", avv:"tramite 'irraggiungibile'", st:"ok"},
+  {id:"spazio_a21", c:1, t:"Spazio A21s", dip:["drive"], ril:"df", solo:"archivia su Drive (tiene 1 h)", avv:"una riga", st:"ok"},
+  {id:"adb_a21", c:1, t:"adb Wi-Fi dell'A21s", dip:["riavvio_a21"], ril:"adb devices", solo:"si spegne a ogni riavvio: serve il cavo (adb tcpip); tutto il resto ha la strada ssh", avv:"no", st:"parz"},
+  {id:"mic_a21", c:1, t:"Microfono A21s", dip:["termux","riavvio_a21"], ril:"rec.sh: prova 3 s prima di ogni blocco; guardiano: volume via ssh (< -85 dB = muto)", solo:"apre Termux in primo piano (permesso 'sopra altre app') e riprova", avv:"guardiano: microfono silenziato", st:"parz"},
+  {id:"reg_a56", c:1, t:"Registrazione A56", dip:["carica_a56","sblocco_a56","batt_a56"], ril:"file che cresce + mic", solo:"avvio in primo piano da sbloccato", avv:"'A56 muto' di notte", st:"parz"},
+  {id:"reg_pc", c:1, t:"Registrazione PC", dip:["pc","disco_pc"], ril:"ultimo flac < 150 s", solo:"avvia_pc (6 h)", avv:"in 'tutti giù'", st:"ok"},
+  // colonna 2
+  {id:"reg_a21", c:2, t:"Registrazione A21s", dip:["carica_a21","mic_a21","spazio_a21","termux"], ril:"età ultimo blocco", solo:"ripara, poi avvia A56 e PC", avv:"se nessuna riserva regge", st:"ok"},
+  {id:"raggiungibile", c:2, t:"A21s raggiungibile dal PC", dip:["wifi_a21","sshd"], ril:"ssh, poi adb", solo:"riconnessione Wi-Fi + sshd", avv:"dopo 10', con l'ultima notte", st:"ok"},
+  {id:"bot", c:2, t:"Bot @IlTuoBot", dip:["wifi_a21","termux","telegram"], ril:"rec_guard: processo vivo", solo:"rilanciato ogni minuto", avv:"il PC dopo 10' (il token sta solo sull'A21s)", st:"parz"},
+  {id:"guardiano", c:2, t:"Guardiano (PC)", dip:["pc"], ril:"-", solo:"gira ogni 2'", avv:"-", st:"ok"},
+  {id:"minuti_pc", c:2, t:"Minuti A21s → PC (sync)", dip:["raggiungibile"], ril:"data di minuti_*.csv", solo:"adb, se giù via ssh (scp)", avv:"no", st:"ok"},
+  // colonna 3
+  {id:"notte", c:3, t:"Notte registrata", alt:["reg_a21","reg_a56","reg_pc"], ril:"guardiano", solo:"riserve automatiche", avv:"'tutti giù'", st:"ok"},
+  {id:"archivio", c:3, t:"Audio su Drive", dip:["raggiungibile","drive"], ril:"md5 su Drive", solo:"archivia ogni giro", avv:"no", st:"ok"},
+  {id:"avvisi", c:3, t:"Avvisi dal PC", dip:["guardiano"], alt:["telegram","pc"], ril:"avvisi.log (ogni messaggio)", solo:"bot del PC se l'A21s è giù; stesso testo max 1 ogni 6 h, max 1 messaggio ogni 30' (urgenti esclusi)", avv:"-", st:"ok"},
+  {id:"scheda", c:3, t:"Scheda della notte (bot)", dip:["reg_a21","bot"], ril:"notti.csv", solo:"telefono che suona non conta come veglia", avv:"-", st:"ok"},
+  // colonna 4
+  // se sveglio certo): oggi PC sempre usato -> analisi ferma per ore "manca mappa_*.json", senza avviso
+  {id:"mappa_base", c:3, t:"Mappa base (PC, calcolo pesante)", dip:["pc","minuti_pc"], ril:"mappe/mappa_<giorno>.json", solo:"SonnoMappaRussare ogni 15', solo col PC fermo", avv:"no", st:"buco"},
+  {id:"kaggle_an", c:4, t:"Analisi Kaggle", dip:["archivio","kaggle","pc","minuti_pc","mappa_base"], alt:["reg_a21","reg_a56"], ril:"0 file = errore; avviso se la mappa fallisce", solo:"riprova; finestra dalle 21; --subito", avv:"alle 12 se non è partita; se la mappa fallisce", st:"buco"},
+  {id:"miniapp", c:4, t:"Mini App (etichette)", dip:["bot","raggiungibile","carica_a21"], alt:["drive","reg_a21"], ril:"-", solo:"audio da Drive se manca sul telefono; note: bot di riserva sull'A56 (bot_riserva.py) acceso dal guardiano dopo 10' di A21s giù; Mini App completa: nessuna riserva", avv:"no", st:"parz", rischio:true},
+  {id:"dati", c:4, t:"I tuoi dati del sonno", alt:["scheda","kaggle_an"], ril:"-", solo:"una delle due analisi basta", avv:"se nessuna: avviso alle 12", st:"ok"},
+  {id:"ora_legale", c:0, t:"Ora legale 25/10", ril:"(nessuno)", solo:"(nessuno)", avv:"no", st:"buco", rischio:true},
+];
+// l'ora legale tocca la scheda e l'analisi (orari locali senza fuso)
+N.find(n=>n.id==="scheda").dip.push("ora_legale"); N.find(n=>n.id==="kaggle_an").dip.push("ora_legale");
+const RISCHI = [
+  ["Ora legale (25/10)", "gli orari sono locali senza fuso: le --:-- si ripetono, la notte può risultare spezzata o lunga 1 h di troppo. Piano: un test della notte del 25/10 e orari con fuso."],
+  ["rclone: client_id condiviso in dismissione nel 2026", "rclone avvisa che l'ID comune per Google Drive smetterà di funzionare: archivio, Mini App da Drive e Kaggle si fermerebbero insieme. Piano: creare un client_id nostro."],
+  ["Aggiornamento Samsung che riavvia l'A21s (05/10 --:--)", "dopo il riavvio la registrazione riparte in background e Android la silenzia: 18 h di zeri. Ora rec.sh prova il mic e apre Termux; riavvio di prova del 06/10 --:-- riuscito. Piano: spegnere il download automatico degli aggiornamenti."],
+  ["Kaggle analizza solo l'A21s", "06/10: A21s muto, A56 escluso per il nome del file (corretto) e PC mai incluso; russare 0 falso. Restano: file A56 grandi che l'archivio non carica (timeout 15'), il PC fuori da Kaggle, nessun controllo che l'audio analizzato non sia silenzio."],
+  ["PREVEDIBILE: Mini App senza ripiego (08/10)", "il server della Mini App sta solo sull'A21s: A21s scarico (caricatore che non carica) = Mini App morta, nessun avviso, nessuna alternativa. Si poteva prevedere guardando chi dipende solo dall'A21s. Piano: server di riserva sul PC (audio da Drive) + notifica col pulsante per aprirla."],
+  ["PREVEDIBILE: caricatore che non carica (07/10)", "Android diceva 'in carica' ma la batteria calava di ~3%/h dalle 13 alle 23: nessuno guardava la TENDENZA, solo lo stato. Piano: allarme se in carica e la percentuale scende per 1 h."],
+  ["Mappa base solo col PC fermo", "06/10: Kaggle aspettava mappa_<giorno>.json per ore perché il PC era usato; nessun avviso. Piano: far disegnare Kaggle anche senza la mappa base, o avvisare."],
+  ["Inizio del sonno senza l'A56", "06/10 l'analisi dice addormentato alle --:--; in realtà A56 usato a letto fino alle --:-- (sonno --:--). Piano: lo schermo dell'A56 conta come veglia."],
+  ["Buchi tra i file del PC", "06/10: --:--, --:--, --:-- senza audio PC. Piano: capire perché la registrazione non riparte subito."],
+  ["File audio troncati", "se la registrazione viene uccisa a metà, l'm4a può restare illeggibile (manca l'indice finale). Piano: controllo ffprobe al momento dell'archivio e riparazione."],
+  ["Risparmio energetico riattivato da Samsung", "coperto dal guardiano (lo rispegne), ma solo se l'A21s è raggiungibile via adb."],
+  ["Quota GPU Kaggle finita", "30 h a settimana: con i test Qwen si può esaurire. Oggi c'è il ripiego sull'analisi del PC, ma nessuno lo dice. Piano: leggere la quota e avvisare sotto 5 h."],
+  ["PC spento di notte", "nessun guardiano, nessuna registrazione PC, nessun avviso. Piano: ultimo controllo dell'A21s che avvisa da solo se non sente il PC."],
+];
+const byId = Object.fromEntries(N.map(n=>[n.id,n]));
+const COLS = ["cause", "dispositivi e servizi", "pezzi del sistema", "funzioni", "per te"];
+const W = 232, H = 38, GX = 270, GY = 50, TOP = 46, LEFT = 14;
+const svg = document.getElementById("g"), NS = "http://www.w3.org/2000/svg";
+const perCol = [0,0,0,0,0]; N.forEach(n=>{ n.r = perCol[n.c]++; n.x = LEFT + n.c*GX; n.y = TOP + n.r*GY; });
+const altezza = TOP + Math.max(...perCol)*GY + 10, larg = LEFT + 4*GX + W + 14;
+svg.setAttribute("viewBox", `0 0 ${larg} ${altezza}`); svg.setAttribute("width", larg); svg.setAttribute("height", altezza);
+const el = (t,a,p)=>{ const e=document.createElementNS(NS,t); for(const k in a) e.setAttribute(k,a[k]); (p||svg).appendChild(e); return e; };
+COLS.forEach((c,i)=>{ const t=el("text",{x:LEFT+i*GX, y:24, class:"col-title"}); t.textContent=c; });
+const edges = [];
+N.forEach(n=>{ [...(n.dip||[]).map(d=>[d,false]), ...(n.alt||[]).map(d=>[d,true])].forEach(([d,alt])=>{
+  const s = byId[d]; const x1=s.x+W, y1=s.y+H/2, x2=n.x, y2=n.y+H/2, mx=(x1+x2)/2;
+  edges.push({from:d, to:n.id, e: el("path",{d:`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`, class:"edge"+(alt?" alt":"")})}); }); });
+const PILL = {ok:"coperto", parz:"in parte", buco:"buco"};
+N.forEach(n=>{ const g = el("g",{class:"node"+(n.rischio?" rischio":""), tabindex:0, role:"button", "aria-label":"Simula guasto: "+n.t});
+  el("rect",{x:n.x,y:n.y,width:W,height:H},g); icona(g, n.x+8, n.y+9, IC[n.id]); const t=el("text",{x:n.x+34,y:n.y+16},g); t.textContent=n.t;
+  const s=el("text",{x:n.x+34,y:n.y+30,class:"st"},g); s.textContent=PILL[n.st]+(n.alt?" · basta una riserva":"");
+  n.g = g; g.addEventListener("click",()=>tocca(n.id)); g.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tocca(n.id);} }); });
+let rotti = new Set(), liveBase = null, liveDetails = {};
+function stato(){ // propagazione: giu se una dipendenza e' giu o tutte le riserve sono giu; riserva se qualche riserva e' giu
+  const st = {}; let cambiato = true; N.forEach(n=>st[n.id] = liveBase && liveBase[n.id] ? liveBase[n.id] : (rotti.has(n.id) ? "rotto" : "ok"));
+  while (cambiato) { cambiato = false; N.forEach(n=>{ if (st[n.id]==="rotto") return;
+    if (liveBase && st[n.id]==="?") return;
+    const giuDip = (n.dip||[]).some(d=>st[d]!=="ok" && st[d]!=="riserva");
+    const alt = n.alt||[]; const altGiu = alt.filter(d=>st[d]==="rotto"||st[d]==="giu").length;
+    const ignoto = liveBase && ((n.dip||[]).some(d=>st[d]==="?") || alt.some(d=>st[d]==="?"));
+    let v = ignoto ? "?" : (giuDip || (alt.length && altGiu===alt.length) ? "giu" : (altGiu ? "riserva" : "ok"));
+    if (v!==st[n.id]) { st[n.id]=v; cambiato=true; } }); }
+  return st; }
+function disegna(){ const st = stato(); N.forEach(n=>n.g.setAttribute("class","node"+(n.rischio?" rischio":"")+(st[n.id]!=="ok"?" "+st[n.id]:"")));
+  edges.forEach(x=>x.e.classList.toggle("hot", st[x.from]!=="ok" && st[x.from]!=="riserva" && st[x.to]!=="ok"));
+  const coinvolti = N.filter(n=>st[n.id]!=="ok"); const eff = document.getElementById("eff"); eff.textContent = "";
+  document.getElementById("ptitle").textContent = rotti.size ? `Guasto: ${[...rotti].map(i=>byId[i].t).join(" + ")}` : "Nessun guasto";
+  document.getElementById("phint").textContent = rotti.size ? `${coinvolti.filter(n=>st[n.id]==="giu").length} pezzi giù a cascata, ${coinvolti.filter(n=>st[n.id]==="riserva").length} reggono con una riserva. Tocca ancora un nodo per aggiungere un guasto o toglierlo.` : "Scegli un nodo nel grafo o un esempio qui sopra.";
+  coinvolti.sort((a,b)=>a.c-b.c).forEach(n=>{ const c=document.createElement("div"); c.className="card "+st[n.id];
+    const etich = {rotto:"guasto", giu:"giù a cascata", riserva:"regge con una riserva"}[st[n.id]];
+    c.innerHTML = `<b>${n.t}</b><span class="pill ${n.st}">${PILL[n.st]} · ${etich}</span><dl class="kv"><dt>Ce ne accorgiamo</dt><dd>${n.ril}</dd><dt>Da solo fa</dt><dd>${n.solo}</dd><dt>Ti avvisa</dt><dd>${n.avv}</dd></dl>`;
+    eff.appendChild(c); }); }
+function tocca(id){ rotti.has(id) ? rotti.delete(id) : rotti.add(id); disegna(); }
+window.addEventListener("message", e=>{ if(e.origin!==location.origin || !e.data || e.data.tipo!=="sistema") return; liveBase=e.data.stati; liveDetails=e.data.dettagli||{}; rotti=new Set(); disegna(); });
+document.getElementById("reset").onclick = ()=>{ rotti = new Set(); disegna(); };
+document.getElementById("es1").onclick = ()=>{ rotti = new Set(["wifi_a21"]); disegna(); };
+document.getElementById("es2").onclick = ()=>{ rotti = new Set(["sblocco_a56","carica_a56"]); disegna(); };
+const ul = document.getElementById("risks"); RISCHI.forEach(([t,d])=>{ const li=document.createElement("li"); li.innerHTML=`<b>${t}</b> — ${d}`; ul.appendChild(li); });
+rotti = new Set(["wifi_a21"]); disegna();
+
+// ---------------------------------------------------------------- vista "Tu": stati della persona (analisi/STATI_ATOMICI.md)
+// c = colonna (0 sveglio ... 4 sonno); cod: "si" nel codice, "parte" in parte, "doc" solo nel documento
+const P = [
+ {id:"sveglio", c:0, t:"Sveglio (certo)", cod:"si", reg:"no", def:"sveglio ora, certo", come:"PC usato negli ultimi minuti, oppure A56 sbloccato da poco", fa:"niente riserve; analisi pesanti permesse"},
+ {id:"al_pc", c:0, t:"Al PC", cod:"parte", reg:"no", def:"alla scrivania, in camera", come:"uso del PC (activity.csv)", fa:"vale come sveglio certo (sveglio_certo dal 04/10)"},
+ {id:"notte_bianco", c:0, t:"Notte in bianco", cod:"doc", reg:"no", def:"sveglio tutta la notte, di solito al PC", come:"PC usato per ore di notte", fa:"oggi nessuna gestione dedicata"},
+ {id:"sveglio_q", c:1, t:"Sveglio?", cod:"si", reg:"sì", def:"probabilmente sveglio", come:"uso del PC/A56 che invecchia (25' / 12')", fa:"si registra; riserve se incerto"},
+ {id:"tel_letto", c:1, t:"Telefono a letto", cod:"doc", reg:"sì", def:"a letto con l'A56 sbloccato (TikTok, musica)", come:"A56 usato, PC no", fa:"può essere un falso sveglio: ci si addormenta col video"},
+ {id:"latenza", c:1, t:"Latenza (prima ora)", cod:"doc", reg:"sì", def:"dopo uso intenso tace ma non dorme ancora", come:"uso di almeno 30' finito da meno di 60'", fa:"oggi non distinta dal sonno"},
+ {id:"riposo", c:1, t:"Riposo", cod:"si", reg:"sì", def:"a letto per riposarsi, magari col telefono", come:"lo dichiari (tasto, con scadenza)", fa:"nota 'riposo' (tasto 🛋️ dal 04/10)"},
+ {id:"letto_buio", c:1, t:"Sveglio a letto al buio", cod:"doc", reg:"sì", def:"a letto sveglio, fermo, niente telefono", come:"nessun sensore lo distingue dal sonno silenzioso", fa:"mai dedotto: solo se lo dici"},
+ {id:"incerto", c:2, t:"Non si sa (?)", cod:"si", reg:"sì", def:"nessuna prova fresca o prove in conflitto", come:"il silenzio NON vale come sonno", fa:"si registra; di notte riserve"},
+ {id:"cieco", c:2, t:"Sistema cieco", cod:"parte", reg:"sì", def:"non arriva abbastanza dato", come:"tutti gli ingressi mancanti", fa:"livello '?'; il guardiano avvisa se l'A21s è giù"},
+ {id:"musica", c:2, t:"Musica/video a letto", cod:"parte", reg:"sì", def:"il telefono suona e imita voce o russare", come:"media_a56.csv (A56 che suona)", fa:"dal 04/10 la voce di quei minuti non conta come veglia"},
+ {id:"fuori_camera", c:2, t:"Fuori camera (in casa)", cod:"parte", reg:"sì", def:"in un'altra stanza, sveglio", come:"camera muta + uso recente", fa:"'dove = fuori camera?'; stessa_stanza.py per l'A56"},
+ {id:"fuori_casa", c:2, t:"Fuori casa", cod:"si", reg:"no", def:"non è in casa", come:"lo dichiari ('dormo fuori')", fa:"nessuna notte finta dalla camera"},
+ {id:"dorme_q", c:3, t:"Dorme?", cod:"si", reg:"sì", def:"probabilmente dorme", come:"solo russare del modello, o solo Sleep as Android", fa:"si registra"},
+ {id:"dorme_tel", c:3, t:"Dorme col telefono acceso", cod:"parte", reg:"sì", def:"si addormenta con l'A56 che suona", come:"A56 + russare (clip 0441; notte 04/10 con Musictube)", fa:"dal 04/10 la scheda notte lo conta come sonno"},
+ {id:"riaddorm", c:3, t:"Riaddormentamento", cod:"parte", reg:"sì", def:"era sveglio, poi russa", come:"uso più vecchio del russare confermato", fa:"motivo 'ti sei riaddormentato'"},
+ {id:"si_gira", c:3, t:"Si gira nel letto", cod:"parte", reg:"sì", def:"movimento breve, non è un risveglio", come:"picchi sporadici", fa:"'mosso' nella scheda notte"},
+ {id:"dorme", c:4, t:"Dorme (certo)", cod:"si", reg:"sì", def:"dorme ora, certo", come:"russare confermato da te, o russare + Sleep as Android d'accordo", fa:"registrazione prima di tutto; riserve se l'A21s cede"},
+ {id:"risveglio", c:4, t:"Risveglio breve", cod:"si", reg:"sì", def:"si sveglia pochi minuti e riprende", come:"russare, uso breve, russare (si vede solo dopo)", fa:"la notte continua (notte.veglia)"},
+ {id:"pisolino", c:4, t:"Pisolino", cod:"si", reg:"sì", def:"sonno breve di giorno", come:"tasto, oppure inizio tra 08 e 18 e meno di 5 h", fa:"niente scheda del mattino automatica"},
+ {id:"altra_stanza", c:4, t:"Dorme in un'altra stanza", cod:"doc", reg:"sì", def:"dorme fuori dalla camera", come:"camera muta + A56 fermo", fa:"vietato il voto finto da camera muta"},
+];
+const TR = [["sveglio","sveglio_q"],["sveglio_q","incerto"],["incerto","dorme_q"],["dorme_q","dorme"],["dorme","risveglio"],["risveglio","dorme"],
+ ["al_pc","latenza"],["latenza","dorme_q"],["al_pc","notte_bianco"],["tel_letto","dorme_tel"],["dorme_tel","dorme"],["musica","dorme_tel"],
+ ["sveglio_q","riaddorm"],["riaddorm","dorme"],["riposo","dorme_q"],["letto_buio","dorme_q"],["si_gira","dorme"],["dorme","sveglio_q"],
+ ["fuori_camera","altra_stanza"],["sveglio_q","tel_letto"]];
+(function(){
+  const svgP = document.getElementById("gp"), PW = 196, PH = 38, PGX = 230, PGY = 50, PT = 46, PL = 14;
+  const colsP = ["sveglio", "probabilmente sveglio", "incerto / contesto", "probabilmente dorme", "dorme"], righe = [0,0,0,0,0];
+  P.forEach(p=>{ p.r = righe[p.c]++; p.x = PL + p.c*PGX; p.y = PT + p.r*PGY; });
+  const hP = PT + Math.max(...righe)*PGY + 10, wP = PL + 4*PGX + PW + 14;
+  svgP.setAttribute("viewBox", `0 0 ${wP} ${hP}`); svgP.setAttribute("width", wP); svgP.setAttribute("height", hP);
+  const mk = (t,a,par)=>{ const e=document.createElementNS(NS,t); for(const k in a) e.setAttribute(k,a[k]); (par||svgP).appendChild(e); return e; };
+  const defs = mk("defs",{}), m = mk("marker",{id:"freccia", viewBox:"0 0 10 10", refX:9, refY:5, markerWidth:7, markerHeight:7, orient:"auto-start-reverse"}, defs);
+  mk("path",{d:"M0,0 L10,5 L0,10 z", style:"fill: var(--muted)"}, m);
+  colsP.forEach((c,i)=>{ const t=mk("text",{x:PL+i*PGX, y:24, class:"col-title"}); t.textContent=c; });
+  const pid = Object.fromEntries(P.map(p=>[p.id,p]));
+  const archi = TR.map(([a,b])=>{ const s=pid[a], d=pid[b]; let x1,y1,x2,y2;
+    if (d.c > s.c) { x1=s.x+PW; y1=s.y+PH/2; x2=d.x; y2=d.y+PH/2; } else if (d.c < s.c) { x1=s.x; y1=s.y+PH/2; x2=d.x+PW; y2=d.y+PH/2; }
+    else { x1=s.x+PW-20; y1=s.y+(d.y>s.y?PH:0); x2=d.x+PW-20; y2=d.y+(d.y>s.y?0:PH); }
+    const mx=(x1+x2)/2; return {a, b, e: mk("path",{d:`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`, class:"tr"})}; });
+  const COD = {si:"nel codice", parte:"in parte", doc:"solo nel documento"};
+  const DICH = new Set(["riposo","fuori_casa","letto_buio","pisolino"]); // stati che dichiari tu (tasto/nota); gli altri li deduce il sistema
+  P.forEach(p=>{ const g = mk("g",{class:"pnode zona"+p.c+(p.cod==="doc"?" solo_doc":p.cod==="parte"?" in_parte":""), tabindex:0, role:"button", "aria-label":"Stato: "+p.t});
+    mk("rect",{x:p.x,y:p.y,width:PW,height:PH},g); const t=mk("text",{x:p.x+14,y:p.y+16},g); t.textContent=p.t;
+    const s=mk("text",{x:p.x+14,y:p.y+30,class:"st"},g); s.textContent=(DICH.has(p.id)?"lo dici tu":"dedotto")+" · "+COD[p.cod];
+    p.g=g; g.addEventListener("click",()=>scegli(p.id)); g.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); scegli(p.id);} }); });
+  function scegli(id){ const p = pid[id];
+    const vicini = new Set(TR.filter(([a,b])=>a===id||b===id).flat());
+    P.forEach(q=>{ q.g.classList.toggle("scelto", q.id===id); q.g.classList.toggle("vicino", q.id!==id && vicini.has(q.id)); });
+    archi.forEach(x=>x.e.classList.toggle("hot", x.a===id || x.b===id));
+    document.getElementById("ptT").textContent = p.t;
+    document.getElementById("phT").textContent = p.def;
+    const da = TR.filter(([a,b])=>b===id).map(([a])=>pid[a].t), verso = TR.filter(([a])=>a===id).map(([,b])=>pid[b].t);
+    const eff = document.getElementById("effT"); eff.textContent = "";
+    const c = document.createElement("div"); c.className = "card";
+    c.innerHTML = `<span class="pill ${p.cod==="si"?"ok":p.cod==="parte"?"parz":"buco"}">${COD[p.cod]}</span><dl class="kv"><dt>Si riconosce</dt><dd>${p.come}</dd><dt>Il sistema fa</dt><dd>${p.fa}</dd><dt>Registra</dt><dd>${p.reg}</dd><dt>Ci si arriva da</dt><dd>${da.join(", ")||"-"}</dd><dt>Porta a</dt><dd>${verso.join(", ")||"-"}</dd></dl>`;
+    eff.appendChild(c); }
+  scegli("dorme_tel");
+  const tS = document.getElementById("tabS"), tT = document.getElementById("tabT");
+  function vista(t){ const s = t==="S"; tS.setAttribute("aria-selected", s); tT.setAttribute("aria-selected", !s);
+    document.getElementById("vistaS").hidden = !s; document.getElementById("vistaT").hidden = s; }
+  tS.onclick = ()=>vista("S"); tT.onclick = ()=>vista("T");
+  if (location.hash === "#tu") vista("T");
+})();
+
+// ---------------------------------------------------------------- viste "Segnali" e "Scenari" (analisi/albero.py PROVE, SCENARI.md)
+// PROVE vere di albero.py: [peso log-odds (+ sveglio, - dorme), mezza vita in minuti, forte]
+const PROVE = {
+  pc:[6.0,15,true,"PC usato (tastiera/mouse veri)"], a56:[2.5,10,false,"A56 sbloccato"], saa_sveglio:[1.0,10,false,"Sleep as Android: sveglio"],
+  saa_dorme:[-1.0,10,false,"Sleep as Android: sonno"], russa_jeans:[-5.0,30,true,"Russare confermato da te"], russa_modello:[-2.0,30,false,"Russare (solo il modello)"],
+  respiro:[-1.5,30,false,"Respiro regolare (A21s)"], movimento:[0.8,10,false,"Movimenti continui nel letto"], luce:[0.3,10,false,"Luce in camera"],
+  latenza:[1.2,60,false,"Uso intenso finito da poco (~1 h per addormentarsi)"],
+};
+const CERTO = 2.5, FORSE = 1.0;
+// chi misura ogni segnale (i segnali sono MISURATI; gli stati della vista Tu sono DEDOTTI da questi)
+const FONTE = {pc:"misurato: PC", a56:"misurato: A56", saa_sveglio:"misurato: A56, Sleep as Android", saa_dorme:"misurato: A56, Sleep as Android", russa_jeans:"lo confermi tu", russa_modello:"misurato: A21s (modello)", respiro:"misurato: A21s", movimento:"misurato: accelerometro A56", luce:"misurato: sensore luce A56", latenza:"dedotto dall'uso di PC/A56"};
+const sel = {}; // nome -> minuti fa (assente = segnale spento)
+function stima(){ // semplificazione fedele di albero._stima_base: decadimento, SAA sonno e respiro ignorati se PC/A56 usati, conflitto tra prove forti
+  const usato = ("pc" in sel && sel.pc <= 15) || ("a56" in sel && sel.a56 <= 10);
+  const prove = Object.entries(sel).filter(([n])=>!(usato && (n==="saa_dorme"||n==="respiro")))
+    .map(([n,e])=>{ const [w,v,forte] = PROVE[n]; return {n, p: w*Math.pow(0.5, e/v), forte, e}; });
+  const punti = prove.reduce((a,x)=>a+x.p, 0);
+  const forti = prove.filter(x=>x.forte && Math.abs(x.p)>=FORSE);
+  const pos = forti.filter(x=>x.p>0), neg = forti.filter(x=>x.p<0);
+  const scontro = pos.some(a=>neg.some(b=>Math.abs(a.e-b.e)<=2)); // prove forti opposte nello stesso momento
+  let liv = punti >= CERTO ? "sveglio" : punti >= FORSE ? "sveglio?" : punti <= -CERTO ? "dorme" : punti <= -FORSE ? "dorme?" : "?";
+  if (scontro) liv = "? conflitto";
+  else if (pos.length && neg.length) liv = Math.min(...pos.map(x=>x.e)) < Math.min(...neg.map(x=>x.e)) ? "sveglio" : "dorme"; // vince la piu' recente
+  return {punti, liv, prove, ignorati: usato ? ["saa_dorme","respiro"].filter(n=>n in sel) : []};
+}
+(function(){
+  const box = document.getElementById("righeS");
+  Object.entries(PROVE).forEach(([n,[w,v,forte,nome]])=>{
+    const r = document.createElement("div"); r.className = "riga";
+    r.innerHTML = `<label><input type="checkbox" id="on_${n}"> ${nome} <span class="src">${FONTE[n]}</span></label><span class="peso ${w>0?"pos":"neg"}">${w>0?"+":""}${w.toFixed(1)}</span><span class="vita">½ ${v}'${forte?" · forte":""}</span><label class="fa">fa <input type="number" id="fa_${n}" min="0" max="240" value="0"> min</label>`;
+    box.appendChild(r);
+    const cb = r.querySelector("input[type=checkbox]"), fa = r.querySelector("input[type=number]");
+    const agg = ()=>{ if (cb.checked) sel[n] = Math.max(0, +fa.value||0); else delete sel[n]; disegnaS(); };
+    cb.addEventListener("change", agg); fa.addEventListener("input", agg);
+  });
+  disegnaS();
+})();
+function disegnaS(){
+  const r = stima(), svg = document.getElementById("scala"), W = 640, H = 120, x = v=>20 + (Math.max(-8,Math.min(8,v))+8)/16*(W-40);
+  svg.innerHTML = "";
+  const z = [[-8,-CERTO,"dorme"],[-CERTO,-FORSE,"dorme?"],[-FORSE,FORSE,"?"],[FORSE,CERTO,"sveglio?"],[CERTO,8,"sveglio"]];
+  const mk=(t,a)=>{ const e=document.createElementNS("http://www.w3.org/2000/svg",t); for(const k in a) e.setAttribute(k,a[k]); svg.appendChild(e); return e; };
+  z.forEach(([a,b,nm],i)=>{ mk("rect",{x:x(a),y:30,width:x(b)-x(a),height:34,class:"zona z"+i}); const t=mk("text",{x:(x(a)+x(b))/2,y:52,"text-anchor":"middle",class:"zt"}); t.textContent=nm; });
+  [-CERTO,-FORSE,FORSE,CERTO].forEach(v=>{ mk("line",{x1:x(v),x2:x(v),y1:26,y2:68,class:"soglia"}); const t=mk("text",{x:x(v),y:84,"text-anchor":"middle",class:"tick"}); t.textContent=(v>0?"+":"")+v; });
+  const t0=mk("text",{x:x(0),y:84,"text-anchor":"middle",class:"tick"}); t0.textContent="0";
+  mk("line",{x1:x(r.punti),x2:x(r.punti),y1:18,y2:72,class:"ago"}); const tp=mk("text",{x:x(r.punti),y:14,"text-anchor":"middle",class:"agot"}); tp.textContent=`${r.punti>=0?"+":""}${r.punti.toFixed(2)}`;
+  const t=mk("text",{x:20,y:108,class:"tick"}); t.textContent="← dorme · punteggio (somma dei pesi che decadono col tempo) · sveglio →";
+  document.getElementById("esitoS").textContent = `Stato stimato: ${r.liv}`;
+  const d = document.getElementById("dettS"); d.textContent = "";
+  r.prove.sort((a,b)=>Math.abs(b.p)-Math.abs(a.p)).forEach(p=>{ const li=document.createElement("li"); li.textContent=`${PROVE[p.n][3]}, ${p.e}' fa: ${p.p>=0?"+":""}${p.p.toFixed(2)}`; d.appendChild(li); });
+  r.ignorati.forEach(n=>{ const li=document.createElement("li"); li.className="ign"; li.textContent=`${PROVE[n][3]}: ignorato perché PC o A56 sono usati`; d.appendChild(li); });
+  if (!r.prove.length) { const li=document.createElement("li"); li.textContent="Nessun segnale acceso: il silenzio non vale come sonno, quindi '?'."; d.appendChild(li); }
+}
+const SC = [
+ [1,"Al PC adesso",{pc:0},"sveglio",""],[2,"Ha lasciato il PC 25' fa",{pc:25},"sveglio?",""],[3,"A letto sveglio al buio, niente telefono",{pc:60},"?","indistinguibile dal sonno silenzioso"],
+ [4,"TikTok a letto al buio",{a56:0},"sveglio","si addormenta col video che va"],[5,"Posa il telefono 12' fa",{a56:12},"sveglio?",""],[6,"Russa a schermo aperto (clip 0441)",{a56:0,russa_jeans:0},"dorme",""],
+ [7,"Russa, confermato da te",{russa_jeans:3},"dorme","conferma sbagliata"],[8,"Russa, solo il modello",{russa_modello:0},"dorme?","musica o altra persona"],
+ [9,"Russa (modello) + SAA sonno",{russa_modello:0,saa_dorme:0},"dorme","due fonti deboli sbagliate insieme"],[10,"Musica accesa, sveglio fermo a letto",{russa_modello:0},"dorme?","LIMITE: sbaglia"],
+ [11,"PC usato e russare del modello",{pc:0,russa_modello:0},"sveglio",""],[12,"PC usato e russare confermato nello stesso minuto",{pc:0,russa_jeans:1},"? conflitto","qualcun altro al PC"],
+ [13,"Russava, poi si alza al PC",{russa_jeans:8,pc:0},"sveglio",""],[14,"Al PC, poi si addormenta e russa",{pc:8,russa_jeans:0},"dorme",""],
+ [15,"Dorme con luce e mascherina, SAA fermo",{saa_dorme:0},"dorme?","luce e movimento non usati apposta"],[16,"SAA dice sonno col telefono in mano",{a56:0,saa_dorme:0},"sveglio",""],
+ [17,"Fuori casa",{},"?",""],[18,"A56 in altra stanza, lui al PC",{pc:0,saa_dorme:0},"sveglio",""],[19,"Sonno pomeridiano",{russa_modello:2},"dorme?","nessuna fascia oraria"],
+ [20,"Notte in bianco al PC",{pc:0},"sveglio","il russare falso in camera non conta"],[21,"Dorme in un'altra stanza",{a56:30},"?","voto finto vietato"],
+ [22,"Un altro russa in camera, lui al telefono",{a56:0,russa_modello:0},"?","conflitto"],[23,"Sync fermo / dati assenti",{},"?",""],[24,"Snapshot malformato",{},"?","mai eccezioni"],
+ [25,"PC lasciato acceso con un video",{},"?","il video non conta: input veri"],[26,"Si gira nel letto mentre russa",{russa_jeans:0,saa_sveglio:0},"dorme","movimento non è veglia"],
+ [27,"Si alza 2' a bere senza toccare niente",{russa_jeans:5},"dorme","LIMITE: risveglio invisibile"],
+ ["28 · 04/10","A56 suona Musictube mentre dorme",{respiro:0},"dorme? live · dorme nella scheda notte","coperto nella scheda notte (notte.py), non ancora nello stato live"],
+];
+(function(){
+  const tb = document.getElementById("tabScen");
+  SC.forEach(([n,sit,sig,att,lim])=>{ const tr=document.createElement("tr"); const limite = /LIMITE|non ancora/.test(lim);
+    tr.innerHTML = `<td>${n}</td><td>${sit}</td><td class="sig">${Object.entries(sig).map(([k,v])=>`${k} ${v}'`).join(", ")||"nessuno"}</td><td><b>${att}</b></td><td>${lim||"-"}</td><td><span class="pill ${limite?"parz":"ok"}">${limite?"limite noto":"test ok"}</span></td><td><button type="button">Prova</button></td>`;
+    tr.querySelector("button").onclick = ()=>{ Object.keys(PROVE).forEach(k=>{ const cb=document.getElementById("on_"+k), fa=document.getElementById("fa_"+k); cb.checked = k in sig; fa.value = sig[k]??0; if (k in sig) sel[k]=sig[k]; else delete sel[k]; });
+      disegnaS(); document.getElementById("tabG").click(); document.getElementById("scenS").textContent = `Scenario ${n}: ${sit} · atteso: ${att}`; };
+    tb.appendChild(tr); });
+})();
+(function(){ // 4 schede: Sistema, Tu, Segnali, Scenari
+  const T = [["tabS","vistaS"],["tabT","vistaT"],["tabG","vistaG"],["tabC","vistaC"]];
+  T.forEach(([b,v])=>document.getElementById(b).onclick = ()=>T.forEach(([b2,v2])=>{ document.getElementById(b2).setAttribute("aria-selected", b2===b); document.getElementById(v2).hidden = v2!==v; }));
+  const h = {"#tu":"tabT","#segnali":"tabG","#scenari":"tabC"}[location.hash]; if (h) document.getElementById(h).click();
+})();
+</script>

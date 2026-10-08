@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Sonno</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#0f1219;--pn:#171b26;--pn2:#1e2332;--tx:#e9ebf2;--mu:#8b92a8;--ac:#6cb0ff;--bd:#2b3248;--r:12px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:14px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+#app{display:flex;flex-direction:column;min-height:100%;padding:8px 10px calc(12px + env(safe-area-inset-bottom));gap:6px}
+.riga{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+select,button{background:var(--pn);color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:0 12px;font:inherit;min-height:40px}
+select{flex:1;min-width:0}
+button:active{background:var(--pn2)}
+button.on{border-color:var(--ac);color:var(--ac)}
+button:disabled{opacity:.35}
+.pic{min-width:46px;padding:0 8px}
+#top{display:flex;flex-direction:column;gap:6px}
+#titolo{flex:1;text-align:center;font-weight:600;letter-spacing:.2px;touch-action:pan-y;padding:8px 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+canvas{width:100%;display:block;border-radius:var(--r);background:#0a0d14}
+#ov,#lens{height:44px;touch-action:none}
+#lens{outline:1px solid var(--ac)}
+#cvbox{position:relative}
+#main{touch-action:none}
+#msg{color:var(--mu);font-size:12px;min-height:16px;transition:opacity .6s}
+#sistema{background:var(--pn);border:1px solid var(--bd);border-radius:var(--r);padding:6px;display:none}#sistema.on{display:block}#sistema iframe{width:100%;height:72vh;border:0;background:#fff;border-radius:8px}
+#pan{background:var(--pn);border:1px solid var(--bd);border-radius:var(--r);padding:8px;display:flex;flex-direction:column;gap:6px}
+#selinfo{font-weight:600}
+#avviso{font-size:13px;color:#ffb36b}
+#cats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button.cat{display:flex;align-items:center;gap:10px;min-height:56px;font-size:15px;text-align:left;border-radius:var(--r);border-left-width:6px;background:var(--pn2)}
+button.cat .e{font-size:24px;line-height:1}
+button.cat.cur{outline:2px solid #fff}
+
+button.traccia{width:100%;min-height:64px;margin:8px 0;font-size:16px;font-weight:600;border-radius:var(--r);background:var(--pn2);border:1px dashed var(--ac);color:var(--tx);touch-action:none}
+#orbe{position:fixed;inset:0;z-index:50;background:rgba(10,12,18,.72);touch-action:none}
+#orbeL{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#orbeL path{fill:none;stroke:var(--ac);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.bolla{position:absolute;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--pn2);border:3px solid var(--bd);color:var(--tx);font-size:11px;line-height:1.1;text-align:center;pointer-events:none;transition:transform .08s}
+.bolla .e{font-size:24px}
+.bolla.su{transform:scale(1.18);border-color:#fff}
+.bolla.off{opacity:.3}
+#orbeTxt{position:absolute;left:0;right:0;top:12px;text-align:center;font-size:18px;font-weight:700;pointer-events:none}
+.nasc{display:none!important}
+.mu{color:var(--mu);font-size:12px}
+@media (orientation:landscape){
+  #app{display:grid;grid-template-columns:minmax(0,1fr) 290px;grid-template-rows:auto auto minmax(0,1fr);height:100%;column-gap:10px;padding:6px 10px}
+  #top{grid-column:1;grid-row:1}
+  #ov,#lens{grid-column:1}
+  #ov{grid-row:2}
+  #lens{grid-row:2}
+  #cvbox{grid-column:1;grid-row:3;min-height:0}
+  #main{position:absolute;left:0;top:0}
+  button.cat{min-height:48px}
+}
+#regole{background:var(--pn);border:1px solid var(--bd);border-radius:var(--r);padding:8px;display:none;margin-top:6px}#regole.on{display:block}
+.rgtab{display:flex;gap:6px;margin-bottom:6px}.rgtab button{flex:1}.rgtab button.on{border-color:var(--ac);color:var(--ac)}
+#rgCerca{width:100%;box-sizing:border-box;margin-bottom:6px;padding:7px;border-radius:8px;border:1px solid var(--bd);background:var(--pn2);color:var(--tx)}
+.rgG{margin:4px 0;border:1px solid var(--bd);border-radius:10px;background:var(--pn2)}.rgG>summary{padding:8px;cursor:pointer;font-weight:600}
+.rgR{border-top:1px solid var(--bd);padding:8px}.rgR h4{margin:0 0 3px;font-size:14px}.rgR p{margin:2px 0 4px;font-size:13px;line-height:1.35}
+.rgR.contr{border-left:3px solid #f0a040}.rgR.off{opacity:.55}.rgB{font-size:11px;padding:1px 6px;border-radius:9px;border:1px solid var(--bd);margin-left:4px;color:var(--mu)}
+.rgR.contr .rgB{color:#f0a040;border-color:#f0a040}.rgN{display:flex;flex-wrap:wrap;gap:4px;margin:3px 0}.rgN span{font-size:11px;background:var(--pn);border:1px solid var(--bd);border-radius:7px;padding:1px 6px;font-variant-numeric:tabular-nums}
+.rgF{font-size:10.5px;color:var(--mu);word-break:break-all}.rgNote{font-size:12px;color:#f0a040;margin:2px 0}
+.rgSv{width:100%;height:auto;display:block;margin:4px 0;color:var(--tx)}.rgSeq{display:flex;flex-wrap:wrap;gap:3px;align-items:center;font-size:11.5px}.rgSeq b{background:var(--pn);border:1px solid var(--bd);border-radius:7px;padding:2px 6px;font-weight:400}
+#rgCorpo table{border-collapse:collapse;font-size:11.5px;display:block;overflow-x:auto}#rgCorpo td,#rgCorpo th{border:1px solid var(--bd);padding:3px 5px;vertical-align:top}#rgCorpo h3{font-size:14px;margin:8px 0 4px}#rgCorpo pre{white-space:pre-wrap;background:var(--pn2);padding:8px;border-radius:8px;font-size:13px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <div class="riga"><select id="selNotte"></select><select id="selUnita"></select><button id="bFull" class="pic" title="schermo intero / orizzontale">⛶</button></div>
+    <div class="riga"><button id="bPrec" class="pic">◀</button><div id="titolo">…</div><button id="bSucc" class="pic">▶</button></div>
+  </div>
+  <canvas id="lens" class="nasc"></canvas><canvas id="ov"></canvas>
+  <div id="cvbox"><canvas id="main"></canvas></div>
+  <div id="ctl">
+    <div class="riga" id="player">
+      <button id="bm5" class="pic">−5s</button><button id="bPlay" class="pic">▶</button><button id="bp5" class="pic">+5s</button>
+      <button id="bVel" class="pic">1×</button><button id="bSegui" class="pic on">segui</button>
+      <span id="selAudio" class="riga" aria-label="Dispositivo da etichettare"></span>
+      <span id="ora" class="mu" style="flex:1;text-align:right;min-width:110px"></span>
+    </div>
+    <div class="riga">
+      <button id="bzm" class="pic">🔍−</button><button id="bzp" class="pic">🔍+</button><button id="bGp" class="pic nasc">◀ gruppo</button><button id="bTutto" class="pic">tutto</button><button id="bGn" class="pic nasc">gruppo ▶</button>
+      <button id="bNuova" class="pic">＋ nuova</button><button id="bTaglia" class="pic">✂ taglia qui</button><button id="bConf" class="pic">✓ conferma tutto</button>
+      <button id="bSnap" class="pic on">snap ½s</button><button id="bUndo" class="pic" disabled>↩ annulla</button>
+      <span id="vis" class="mu" style="flex:1;text-align:right"></span>
+    </div>
+    <div id="pan" class="nasc">
+      <div id="selinfo"></div><div id="avviso" class="nasc"></div>
+      <div class="riga"><button id="bSel" class="pic">▶ ascolta</button><button id="bSelNull" class="pic">✕ chiudi</button>
+        <button id="bConfPezzo" class="nasc">✓ conferma</button><button id="bAltra" class="nasc">➕ altra categoria</button><button id="bDel" class="nasc">🗑 cancella</button></div>
+      <div class="riga" id="nudge">
+        <button data-n="i-1" class="pic">inizio −1s</button><button data-n="i+1" class="pic">+1s</button>
+        <button data-n="f-1" class="pic">fine −1s</button><button data-n="f+1" class="pic">+1s</button>
+        <button data-n="i-.1" class="pic">−.1</button><button data-n="i+.1" class="pic">+.1</button>
+        <button data-n="f-.1" class="pic">−.1</button><button data-n="f+.1" class="pic">+.1</button>
+      </div>
+      <button id="bTraccia" class="traccia">✍ tieni premuto e traccia la categoria</button>
+      <div id="cats"></div>
+    </div>
+    <div id="orbe" class="nasc"><svg id="orbeL"></svg></div>
+    <div class="mu" id="aiuto">Trascina = seleziona · doppio tocco = evento intero · tagli (⋮) trascinabili, tieni premuto = elimina · riga tratteggiata = bozza proposta</div>
+    <button id="bSistema">Sistema</button><div id="sistema"><div id="sistemaOra" class="mu">non aggiornato</div><iframe id="grafo" title="Grafo dipendenze sistema sonno" src="/grafo_stati.html"></iframe></div><button id="bRegole">Regole e numeri</button><div id="regole"><div class="rgtab"><button data-v="regole" class="on">Regole</button><button data-v="numeri">Numeri</button><button data-v="detto">Cosa ti ho detto</button></div><input id="rgCerca" placeholder="cerca (es. russare, 20 min, musica)"><div id="rgCorpo" class="mu">tocca per caricare</div></div><div id="msg"></div>
+  </div>
+</div>
+<script>
+"use strict";
+const tg = window.Telegram && Telegram.WebApp;
+if (tg) { try { tg.ready(); tg.expand(); tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {} }
+const $ = id => document.getElementById(id);
+const INIT = (tg && tg.initData) || new URLSearchParams(location.hash.slice(1)).get("tgWebAppData") || "";
+// stesso EMO di copy/testi.py (+ qualche altra categoria del bot)
+const EMO = {silenzio:"🤫", ambiente:"🤫", movimento:"🛏️", russa:"💤", respiro:"🌬️", tosse:"🤧", voce:"🗣️", sbuffo:"💨", musica:"🎵", tiktok:"🎵🗣️",
+  io_che_mi_muovo_nel_lett:"🛏️", tiro_sul_con_il_naso:"👃", risata:"😄", rumori:"🔊", starnuto:"🤧", tastiera:"⌨️", aspirapolvere:"🧹", respiro_sibilio_affa:"🌬️"};
+const PERSONA = new Set(["russa","respiro","movimento","tosse","sbuffo","starnuto","io_che_mi_muovo_nel_lett","tiro_sul_con_il_naso","respiro_sibilio_affa"]);
+// palette come le mappe: russare rossi, respiro blu, movimento ocra, silenzio beige; i modelli piu' precisi piu' scuri
+const HSL = {russa:[4,70], respiro:[208,62], movimento:[37,78], silenzio:[40,34], tosse:[330,45], voce:[262,45], sbuffo:[165,45], musica:[285,40], tiktok:[300,42]};
+const base = c => (c || "").split("/")[0];
+function colore(c, L = 56) { const b = base(c); let h, s; if (HSL[b]) [h, s] = HSL[b]; else { h = 0; for (const ch of b) h = (h*31 + ch.charCodeAt(0)) % 360; s = 45; } return `hsl(${h},${s}%,${L}%)`; }
+const LIVL = {BASSO: 74, MEDIO: 58, PRECISO: 38};
+const emo = c => EMO[base(c)] || "▫️";
+const nome = c => (c || "").replace(/_/g, " ");
+
+async function api(path, body) {
+  const r = await fetch(path, {method: body ? "POST" : "GET", headers: {"X-Init-Data": INIT, ...(body ? {"Content-Type": "application/json"} : {})}, body: body ? JSON.stringify(body) : undefined});
+  if (r.status === 403) throw new Error("403");
+  return r;
+}
+let msgT = 0;
+function msg(t, err, fade) { const m = $("msg"); m.textContent = t || ""; m.style.color = err ? "#ff7b7b" : ""; m.style.opacity = 1; clearTimeout(msgT); if (fade) msgT = setTimeout(() => m.style.opacity = .35, 2500); }
+
+// ---------- stato
+let EL = null, B = null, SP = null;
+let V = {a: 0, span: 1800};
+let SEL = null, CUR = null;
+let PZ = [], curP = -1, HEAD = 0, TOKT = 0;
+let dispositivoAudio = 'a21s';
+let sistemaVisibile=false, sistemaTimer=0, ultimoSistema=null;
+async function aggiornaSistema(){try{const j=await(await api('/api/sistema')).json();ultimoSistema=j;$('sistemaOra').textContent='aggiornato alle '+new Date(j._t).toLocaleTimeString('it-IT');$('grafo').contentWindow.postMessage({tipo:'sistema',stati:j,dettagli:j._dettagli},location.origin)}catch(e){}}
+function mostraSistema(v){sistemaVisibile=v;$('sistema').classList.toggle('on',v);if(v){aggiornaSistema();sistemaTimer=setInterval(aggiornaSistema,30000)}else clearInterval(sistemaTimer)}
+$('bSistema').onclick=()=>mostraSistema(!sistemaVisibile);
+$('grafo').onload=()=>{if(ultimoSistema)$('grafo').contentWindow.postMessage({tipo:'sistema',stati:ultimoSistema,dettagli:ultimoSistema._dettagli},location.origin)};
+try { dispositivoAudio = localStorage.getItem('sonno_dispositivo') || dispositivoAudio; } catch (e) {}
+let segui = true, vel = 1, loopSel = false, snap = true;
+const UNDO = [];
+let CL = [];                              // gruppi di registrazione: pezzi con buchi < 90 s fra loro (l'ora di clip e' quasi tutta vuota)
+function gruppi(pz) { const o = []; for (const p of pz.slice().sort((a, b) => a.i - b.i)) { const l = o[o.length - 1]; if (l && p.i - l.f < 90) l.f = Math.max(l.f, p.f); else o.push({i: p.i, f: p.f}); } return o; }
+function vaiGruppo(c) { if (!c) return; V.span = Math.min(B.dur, Math.max(30, c.f - c.i + 20)); V.a = clampA(c.i - 10); HEAD = c.i; au.pause(); }
+function ovRange() { if (!B) return [0, 1]; if (B.tipo !== "ora" || !CL.length) return [0, B.dur]; return [Math.max(0, CL[0].i - 20), Math.min(B.dur, CL[CL.length - 1].f + 20)]; }
+let DRAFT = null;                         // tagli proposti {grosso, medio, fine}: pezzi consecutivi {id,i,f,cat,src}
+const livZoom = () => V.span > 600 ? "grosso" : V.span > 60 ? "medio" : "fine";
+const au = new Audio(); au.preload = "auto";
+
+const fmt = s => { s = Math.max(0, s); const t = Math.floor(s); return String(Math.floor(t/3600)%24).padStart(2,"0") + ":" + String(Math.floor(t%3600/60)).padStart(2,"0") + ":" + String(t%60).padStart(2,"0"); };
+const sod = iso => +iso.slice(11,13)*3600 + +iso.slice(14,16)*60 + +iso.slice(17,19);
+const clock = t => fmt(B.t0s + t);
+const sn = t => snap ? Math.round(t*2)/2 : Math.round(t*10)/10;
+
+// ---------- avvio e selettori
+async function avvia() {
+  if (!INIT) return msg("Apri da Telegram: tocca 🎧 in @IlTuoBot", true);
+  try { EL = await (await api("/api/elenco")).json(); } catch (e) { return msg(e.message === "403" ? "Non autorizzato (apri da Telegram)" : "Server non raggiungibile", true); }
+  // (alle 17 "stasera" ha gia' 10 blocchi del pomeriggio: conta solo una notte con blocchi fra mezzanotte e le 7)
+  const nr = EL.notti.find(x => x.sonno || x.blocchi.some(b => +b.t0.slice(11, 13) < 7)) || EL.notti[0], u = null, notte = nr && nr.notte;
+  riempiNotti(notte); if (EL.drive_errore) msg(EL.drive_errore, true);
+  const n = EL.notti.find(n => n.notte === notte) || {blocchi: [], ore: []}, l = n.blocchi.length ? n.blocchi : n.ore;
+  // e dentro il blocco il primo minuto di russare (inizio_russa dal server)
+  const russ = n.blocchi.filter(x => x.russa).sort((p, q) => p.t0 < q.t0 ? -1 : 1)[0];
+  const bs = !russ && n.sonno ? n.blocchi.find(x => fineIso(x) > n.sonno[0]) : null;
+  const zs = bs ? Math.max(0, (Date.parse(n.sonno[0] + ":00Z") - Date.parse(bs.t0.slice(0, 19) + "Z")) / 1000) : null;
+  const first = (russ && russ.id) || (bs && bs.id) || (l.length ? l[l.length-1].id : null);
+  if (first) await apri(first, russ && russ.id === first ? "russa" : bs && bs.id === first ? {i: zs, f: zs + 60} : (u && u.unita === first ? u : null)); else msg("Nessuna registrazione disponibile");
+}
+function rr(g, x, y, w, h, r) { r = Math.min(r, w/2, h/2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+const nl = n => { const d = new Date(Date.UTC(+n.slice(0,4), +n.slice(4,6)-1, +n.slice(6,8)-1)); return `${String(d.getUTCDate()).padStart(2,"0")}→${n.slice(6,8)}/${n.slice(4,6)}`; };
+const giornoStr = k => { const d = new Date(); d.setDate(d.getDate() + k); return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`; };
+const nomeNotte = n => n === giornoStr(1) ? "stasera" : n === giornoStr(0) ? "stanotte" : n === giornoStr(-1) ? "ieri notte" : "notte " + nl(n);
+function riempiNotti(sel) {
+  $("selNotte").innerHTML = EL.notti.map(n => `<option value="${n.notte}">${nomeNotte(n.notte)} · ${n.blocchi.length} blocchi ${n.ore.length ? "· " + n.ore.length + " ore" : ""}</option>`).join("");
+  $("selNotte").value = sel; riempiUnita();
+}
+function riempiUnita(sel) {
+  const n = EL.notti.find(x => x.notte === $("selNotte").value); if (!n) return;
+  const opt = x => `<option value="${x.id}">${x.t0.slice(11,16)}–${fineBl(x)}${x.russa == null ? "" : x.russa ? " · russa " + x.russa + "'" : " · silenzio"}</option>`;
+  const dorme = x => n.sonno && x.t0.slice(0,16) < n.sonno[1] && fineIso(x) > n.sonno[0];
+  const bs = n.blocchi.filter(dorme), altri = n.blocchi.filter(x => !dorme(x));
+  $("selUnita").innerHTML = (bs.length ? `<optgroup label="Mentre dormivi ${n.sonno[0].slice(11,16)}–${n.sonno[1].slice(11,16)}">${bs.map(opt).join("")}</optgroup>` : "") +
+    (altri.length ? `<optgroup label="${bs.length ? "Resto del giorno" : "Blocchi 30 min"}">${altri.map(opt).join("")}</optgroup>` : "") +
+    (n.ore.length ? `<optgroup label="Ore (solo clip)">${n.ore.map(x => `<option value="${x.id}">${x.t0.slice(11,13)}:00–${String((+x.t0.slice(11,13)+1)%24).padStart(2,"0")}:00 · ${x.n} clip</option>`).join("")}</optgroup>` : "");
+  if (sel) $("selUnita").value = sel;
+}
+function fineIso(x) { const d = new Date(new Date(x.t0).getTime() + (x.dur || 0) * 1000); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0") + "T" + fineBl(x); }
+function fineBl(x) { const d = new Date(new Date(x.t0).getTime() + (x.dur || 0) * 1000); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+$("selNotte").onchange = () => { riempiUnita(); const n = EL.notti.find(x => x.notte === $("selNotte").value), x = ((n.sonno && n.blocchi.find(b => fineIso(b) > n.sonno[0])) || n.blocchi[0] || n.ore[0]); if (x) apri(x.id); };
+$("selUnita").onchange = () => apri($("selUnita").value);
+
+async function apri(id, zona) {
+  if (B && DRAFT) salvaBozzeVisibili();
+  au.pause(); SEL = null; CUR = null; SP = null; DRAFT = null; B = null; PZ = []; CL = []; curP = -1; HEAD = 0; loopSel = false; msg("carico…"); disegna(); pannello();
+  let b;
+  try { b = await (await api("/api/blocco?id=" + encodeURIComponent(id))).json(); } catch (e) { return msg("Errore di rete", true); }
+  if (!b.dur) return msg("Nessuna registrazione qui", true);
+  if (zona === "russa") zona = b.inizio_russa != null ? {i: b.inizio_russa, f: b.inizio_russa + 60} : null;
+  b.t0s = sod(b.t0); B = b; PZ = b.pezzi; aggiornaDispositivi(); PZ = dispositivoAudio === 'a21s' ? B.pezzi : (B.ascolti?.[dispositivoAudio] || []); TOKT = Date.now(); CL = gruppi(PZ); $('bGp').classList.toggle('nasc', CL.length < 2); $('bGn').classList.toggle('nasc', CL.length < 2); if (b.drive) msg('da Drive · preparo audio…');
+  $("selNotte").value = b.notte; riempiUnita(b.id);
+  $("titolo").textContent = `${b.t0.slice(8,10)}/${b.t0.slice(5,7)} ${b.t0.slice(11,16)}` + (b.tipo === "blocco" ? " · blocco 30 min" : `–${String((+b.t0.slice(11,13)+1)%24).padStart(2,"0")}:00 · solo clip`);
+  if (zona && zona.i != null) { const l = Math.max(zona.f - zona.i, 1), sp = Math.min(Math.max(l*3, 30), b.dur); V.span = sp; V.a = clampA(zona.i - (sp - l)/2); HEAD = zona.i; }
+  else if (b.tipo === "ora") { const c = (zona && zona.i != null && CL.find(c => zona.i >= c.i - 1 && zona.i <= c.f + 1)) || CL[0]; vaiGruppo(c); }
+  else { V.span = b.dur; V.a = 0; }
+  msg(b.tipo === "ora" ? "Spettrogramma dell'ora in preparazione…" : "preparo lo spettrogramma…"); disegna(); pannello();
+  caricaSpec(b.id); caricaProposte(b.id);
+  if (b.succ) api("/api/spec?id=" + b.succ).catch(() => {});
+}
+async function caricaSpec(id) {
+  for (let k = 0; k < 900; k++) {
+    if (!B || B.id !== id) return;
+    let r; try { r = await api("/api/spec?id=" + id); } catch (e) { return msg("Errore di rete", true); }
+    if (r.status === 200) {
+      const buf = await r.arrayBuffer(); if (!B || B.id !== id) return;
+      const dv = new DataView(buf), n = dv.getUint32(0, true), bins = dv.getUint32(4, true), hop = dv.getFloat32(8, true);
+      const px = new Uint8Array(buf, 16, n*bins), lev = new Uint8Array(buf, 16 + n*bins, n);
+      const cv = document.createElement("canvas"); cv.width = n; cv.height = bins; const x = cv.getContext("2d"), im = x.createImageData(n, bins);
+      for (let c = 0; c < n; c++) for (let b = 0; b < bins; b++) { const p = PAL[px[c*bins + b]], o = ((bins-1-b)*n + c)*4; im.data[o] = p[0]; im.data[o+1] = p[1]; im.data[o+2] = p[2]; im.data[o+3] = 255; }
+      x.putImageData(im, 0, 0); SP = {n, bins, hop, img: cv, lev}; msg(""); return disegna();
+    }
+    if (r.status !== 202) return msg("Spettrogramma non disponibile", true);
+    await new Promise(r => setTimeout(r, 2000));
+  }
+}
+async function caricaProposte(id) { // tagli proposti dal server (energia dello spettrogramma + categoria dai modelli); aspetta lo spettrogramma
+  for (let k = 0; k < 900; k++) {
+    if (!B || B.id !== id) return;
+    let r; try { r = await api("/api/proposte?id=" + id); } catch (e) { return; }
+    if (r.status === 200) { const j = await r.json(); if (!B || B.id !== id) return; DRAFT = {}; for (const l in j.livelli) DRAFT[l] = j.livelli[l].map((p, i) => ({...p, id: `b:${l}:${i}`})); return disegna(); }
+    if (r.status !== 202) return;
+    await new Promise(r => setTimeout(r, 2500));
+  }
+}
+const coperto = p => { let c = 0; for (const x of B.intervalli) { const o = Math.min(p.f, x.f) - Math.max(p.i, x.i); if (o > 0) c += o; } return c/(p.f - p.i); };
+function bozze() { // pezzi di bozza del livello dello zoom, in vista, non gia' coperti da etichette vere
+  if (!B || !DRAFT) return [];
+  return DRAFT[livZoom()].filter(p => p.f > V.a && p.i < V.a + V.span && coperto(p) < .5);
+}
+const bozzaDi = id => DRAFT && id && id.startsWith("b:") ? DRAFT[id.split(":")[1]].find(p => p.id === id) : null;
+function tagli() { // punti di taglio trascinabili: dove un pezzo finisce e un altro inizia (etichette vere e bozza)
+  const out = [], vis = B.intervalli.filter(x => x.f > V.a && x.i < V.a + V.span);
+  const T = [...new Set(vis.map(x => Math.round(x.f*10)/10))];
+  for (const t of T) { const E = vis.filter(x => Math.abs(x.f - t) < .06), S = B.intervalli.filter(x => Math.abs(x.i - t) < .06); if (E.length && S.length) out.push({t, kind: "c", E: E.map(x => x.id), S: S.map(x => x.id)}); }
+  const bz = bozze(); for (let k = 0; k + 1 < bz.length; k++) if (Math.abs(bz[k].f - bz[k+1].i) < .06) out.push({t: bz[k].f, kind: "d", E: [bz[k].id], S: [bz[k+1].id]});
+  return out;
+}
+const PAL = (() => { const st = [[0,[10,13,22]],[.25,[40,44,112]],[.5,[135,58,140]],[.75,[232,112,64]],[1,[255,226,140]]], o = [];
+  for (let i = 0; i < 256; i++) { const t = i/255; let k = 1; while (k < st.length-1 && t > st[k][0]) k++; const [t0,c0] = st[k-1], [t1,c1] = st[k], f = (t-t0)/(t1-t0); o.push(c0.map((v,j) => Math.round(v + (c1[j]-v)*f))); } return o; })();
+
+// ---------- audio a pezzi (blocco = 1 pezzo; ora = le clip, i buchi si saltano)
+const pezzoDi = T => PZ.findIndex(p => p.i <= T && T < p.f);
+function aggiornaDispositivi() {
+  const sel = $('selAudio');
+  const ok = d => d === 'a21s' ? B.pezzi.length : !!B.ascolti?.[d]?.length;
+  if (!ok(dispositivoAudio)) dispositivoAudio = ['a21s','a56','pc'].find(ok) || 'a21s';
+  sel.innerHTML = '<span class="mu">ascolti:</span>' + ['a21s','a56','pc'].filter(ok).map(d => `<button class="pic ${d === dispositivoAudio ? 'on' : ''}" data-device="${d}">${d === 'a21s' ? 'A21s' : d.toUpperCase()}</button>`).join('') +
+    (dispositivoAudio !== 'a21s' ? '<span class="mu"> · lo spettrogramma resta quello dell’A21s</span>' : '');
+  sel.querySelectorAll('[data-device]').forEach(b => b.onclick = () => cambiaDispositivo(b.dataset.device));
+}
+function cambiaDispositivo(dev) {
+  if (!B) return;
+  const pezzi = dev === 'a21s' ? B.pezzi : (B.ascolti?.[dev] || []);
+  const play = !au.paused; au.pause(); dispositivoAudio = dev; PZ = pezzi; curP = -1;
+  try { localStorage.setItem('sonno_dispositivo', dev); } catch (e) {}
+  aggiornaDispositivi();
+  vaiA(HEAD, play);
+}
+function vaiA(T, play) {
+  if (!B) return; T = Math.min(Math.max(T, 0), B.dur); let k = pezzoDi(T);
+  if (k < 0) { // buco: nessuna registrazione
+    if (dispositivoAudio !== 'a21s') {  ' vicino con audio di quel dispositivo, dicendo dove
+      const nomeD = dispositivoAudio.toUpperCase();
+      if (!PZ.length) { au.pause(); HEAD = T; msg(`${nomeD} non ha audio in questo blocco (striscia rossa)`, true); return disegna(); }
+      const vic = PZ.map((p, j) => [Math.min(Math.abs(p.i - T), Math.abs(p.f - T)), j]).sort((x, y) => x[0] - y[0])[0][1];
+      const Tn = PZ[vic].i > T ? PZ[vic].i : Math.max(PZ[vic].i, PZ[vic].f - 1), hh = new Date((B.t0s + Tn) * 1000);
+      msg(`${nomeD} non ha registrato qui: salto alle ${String(hh.getUTCHours()).padStart(2,'0')}:${String(hh.getUTCMinutes()).padStart(2,'0')} (verde = c’è audio)`, false, true);
+      k = vic; T = Tn;
+    } else {
+    const nx = PZ.findIndex(p => p.i > T);
+    if (nx < 0) { HEAD = T; msg("Nessuna registrazione qui", true, true); return disegna(); }
+    msg("Nessuna registrazione qui: salto alla clip dopo", false, true); k = nx; T = PZ[nx].i;
+    }
+  }
+  HEAD = T; tieniIn(T); const off = T - PZ[k].i + (PZ[k].offset || 0);
+  if (k === curP && au.readyState > 0) { au.currentTime = off; if (play) au.play().catch(() => {}); }
+  else { curP = k; au.src = PZ[k].audio; au.playbackRate = vel; const nomeD = dispositivoAudio === 'a21s' ? 'A21s' : dispositivoAudio.toUpperCase(), t0c = Date.now();
+    const tt = (EL.tempi || {})[dispositivoAudio], daDrive = dispositivoAudio !== 'a21s' || B.drive;
+    msg(daDrive ? `Carico audio ${nomeD} dal Drive: se non è già pronto, di solito ${tt ? '~' + tt + ' s' : '1-2 minuti'}…` : `Carico audio ${nomeD}…`);
+    const lento = setTimeout(() => { if (curP === k && au.readyState < 1) msg(`Carico audio ${nomeD}: la prima volta va scaricato dal Drive (${tt ? 'di solito ~' + tt + ' s' : 'fino a 1-2 minuti'})…`); }, 4000);
+    au.onerror = () => { clearTimeout(lento); msg(`Audio ${nomeD} non disponibile (Drive non raggiungibile?)`, true); };
+    au.onloadedmetadata = () => { clearTimeout(lento); msg(`Audio ${nomeD} pronto` + (Date.now() - t0c > 4000 ? ` (${Math.round((Date.now() - t0c) / 1000)} s)` : ''), false, true); au.currentTime = off; if (play) au.play().catch(() => msg("Audio non partito", true)); }; au.load(); }
+  disegna();
+}
+async function rinnova() { // gli URL audio scadono in 1 h: dopo 40 minuti li rifaccio
+  if (Date.now() - TOKT < 40*60e3) return; TOKT = Date.now();
+  try { const id = B.id, b = await (await api("/api/blocco?id=" + id)).json(); if (!B || B.id !== id) return;
+    B.pezzi = b.pezzi; B.ascolti = b.ascolti; PZ = dispositivoAudio === 'a21s' ? B.pezzi : (B.ascolti?.[dispositivoAudio] || []);
+  } catch (e) {}
+}
+au.onended = () => {
+  if (curP >= 0 && curP + 1 < PZ.length && (dispositivoAudio === 'a21s' || PZ[curP+1].i <= PZ[curP].f + 2))
+    vaiA(Math.max(PZ[curP + 1].i, PZ[curP].f), true);
+};
+au.onplay = au.onpause = () => { $("bPlay").textContent = au.paused ? "▶" : "⏸"; if (!au.paused) tick(); };
+$("bPlay").onclick = async () => { if (!B) return; if (au.paused) { await rinnova(); loopSel = false; vaiA(SEL && (HEAD < SEL.a || HEAD >= SEL.b) ? SEL.a : HEAD, true); } else au.pause(); };
+$("bm5").onclick = () => B && vaiA(HEAD - 5, !au.paused);
+$("bp5").onclick = () => B && vaiA(HEAD + 5, !au.paused);
+$("bVel").onclick = () => { vel = vel === 1 ? 1.5 : vel === 1.5 ? 2 : vel === 2 ? .5 : 1; au.playbackRate = vel; $("bVel").textContent = vel + "×"; };
+$("bSegui").onclick = () => { segui = !segui; $("bSegui").classList.toggle("on", segui); };
+$("bSnap").onclick = () => { snap = !snap; $("bSnap").classList.toggle("on", snap); };
+$("bSel").onclick = async () => { if (!SEL) return; await rinnova(); loopSel = true; vaiA(SEL.a, true); };
+$("bSelNull").onclick = () => { SEL = null; CUR = null; loopSel = false; pannello(); disegna(); };
+$("bFull").onclick = () => { try { tg && tg.requestFullscreen && tg.requestFullscreen(); } catch (e) {}
+  try { if (!tg || !tg.requestFullscreen) document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); } catch (e) {}
+  try { screen.orientation && screen.orientation.lock && screen.orientation.lock(innerWidth > innerHeight ? "portrait" : "landscape").catch(() => {}); } catch (e) {} };
+function tick() {
+  if (au.paused) return;
+  if (curP >= 0 && PZ[curP]) {
+    HEAD = PZ[curP].i + au.currentTime - (PZ[curP].offset || 0);
+    if (HEAD >= PZ[curP].f && dispositivoAudio !== 'a21s') {
+      const end = PZ[curP].f; au.pause(); HEAD = end;
+      if (curP + 1 < PZ.length && PZ[curP+1].i <= end + 2) vaiA(end, true);
+    }
+  }
+  if (loopSel && SEL && HEAD >= SEL.b) vaiA(SEL.a, true);
+  if (segui) tieniIn(HEAD);
+  disegna(); requestAnimationFrame(tick);
+}
+
+// ---------- vista
+function tieniIn(t) { // la vista scorre per tenere t dentro, con margine 15% dai bordi
+  if (!B || V.span >= B.dur) return; const m = V.span*.15;
+  if (t < V.a + m) V.a = clampA(t - m); else if (t > V.a + V.span - m) V.a = clampA(t - V.span + m);
+}
+const clampA = a => Math.max(0, Math.min(a, B.dur - V.span));
+function zoom(f, c) {
+  if (!B) return; c = c == null ? (SEL ? (SEL.a + SEL.b)/2 : au.paused ? V.a + V.span/2 : HEAD) : c;
+  const sp = Math.min(Math.max(V.span*f, 10), B.dur), r = (c - V.a)/V.span; V.span = sp; V.a = clampA(c - r*sp); disegna();
+}
+$("bzp").onclick = () => { if (SEL && B) { const sp = Math.min(B.dur, Math.max(10, (SEL.b - SEL.a)*1.4)); V.span = sp; V.a = clampA((SEL.a + SEL.b)/2 - sp/2); disegna(); } else zoom(.5); }; $("bzm").onclick = () => zoom(2);
+$("bGp").onclick = () => { const m = V.a + V.span/2, c = CL.slice().reverse().find(c => c.f < m - 1) || CL[CL.length - 1]; vaiGruppo(c); disegna(); };
+$("bGn").onclick = () => { const m = V.a + V.span/2, c = CL.find(c => c.i > m + 1) || CL[0]; vaiGruppo(c); disegna(); };
+$("bTutto").onclick = () => { if (B) { V = {a: 0, span: B.dur}; disegna(); } };
+
+// ---------- esclusioni e buchi
+const sovr = (a, b, x, y) => a < y && b > x;
+function bloccato(a, b, cat) { // l'esclusione che impedisce di etichettare [a,b] (con cat), o null
+  for (const e of B.esclusioni || []) if (sovr(a, b, e.i, e.f) && (e.blocca === "tutto" || (e.blocca === "persona" && (cat === undefined || PERSONA.has(base(cat)))))) return e;
+  return null;
+}
+const nelBuco = (a, b) => !PZ.some(p => sovr(a, b, p.i, p.f));
+
+// ---------- disegno
+const cvM = $("main"), cvO = $("ov"), cvL = $("lens"), box = $("cvbox");
+let W = 300, LANES = 2, H = 200, LAY = {};
+let HATCH = null, G_CUTS = [];
+function pattern(g) { if (!HATCH) { const c = document.createElement("canvas"); c.width = c.height = 8; const x = c.getContext("2d"); x.strokeStyle = "rgba(255,255,255,.35)"; x.lineWidth = 1.5; x.beginPath(); x.moveTo(-1, 9); x.lineTo(9, -1); x.stroke(); HATCH = g.createPattern(c, "repeat"); } return HATCH; }
+function lanes() {
+  const out = {}, fine = []; if (!B) return {n: 0, of: out};
+  for (const x of B.intervalli.slice().sort((p, q) => p.i - q.i || p.f - q.f)) { let k = fine.findIndex(f => f <= x.i + 1e-6); if (k < 0) { k = fine.length; fine.push(0); } fine[k] = x.f; out[x.id] = k; }
+  return {n: fine.length, of: out};
+}
+function misura() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 3), land = innerWidth > innerHeight, mods = B ? B.modelli : [];
+  W = box.clientWidth || 300; LANES = Math.max(2, lanes().n);
+  const lbh = LANES*18 + 28, mdh = mods.length*14 + 2, axh = 16;
+  let sph = 150;
+  if (land) { box.style.height = ""; const av = box.clientHeight; sph = Math.max(90, av - axh - lbh - mdh - 8); H = av; }
+  else { H = axh + sph + 4 + lbh + mdh; box.style.height = H + "px"; }
+  LAY = {axh, sp: axh, sph, lb: axh + sph + 4, ln: axh + sph + 28, lbh, md: axh + sph + 4 + lbh, mdh};
+  if (cvM.width !== Math.round(W*dpr) || cvM.height !== Math.round(H*dpr)) { cvM.width = Math.round(W*dpr); cvM.height = Math.round(H*dpr); cvM.style.height = H + "px"; cvM.style.width = W + "px"; }
+  for (const c of [cvO, cvL]) { const o = Math.round((c.clientWidth || 300)*dpr); if (c.width !== o) { c.width = o; c.height = Math.round(44*dpr); } }
+  return dpr;
+}
+const xo = t => (t - V.a)/V.span*W, to = x => V.a + x/W*V.span;
+function disegna() {
+  const dpr = misura(), g = cvM.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  g.font = "11px system-ui"; g.textBaseline = "middle";
+  if (!B) { g.fillStyle = "#8b92a8"; g.fillText("…", 8, 20); return; }
+  const passi = [1,2,5,10,15,30,60,120,300,600,900,1800], pas = passi.find(p => p*W/V.span >= 64) || 1800;
+  g.fillStyle = "#8b92a8"; g.strokeStyle = "#232a3d"; g.textAlign = "left";
+  for (let t = Math.ceil((B.t0s + V.a)/pas)*pas; t <= B.t0s + V.a + V.span; t += pas) { const x = xo(t - B.t0s); g.beginPath(); g.moveTo(x, LAY.axh - 4); g.lineTo(x, H); g.stroke(); g.fillText(fmt(t), x + 3, 7); }
+  // spettrogramma
+  if (SP) {
+    const k = 1/SP.hop; g.imageSmoothingEnabled = true; g.drawImage(SP.img, V.a*k, 0, V.span*k, SP.bins, 0, LAY.sp, W, LAY.sph);
+    g.strokeStyle = "rgba(255,255,255,.75)"; g.lineWidth = 1; g.beginPath();
+    for (let x = 0; x < W; x += 2) { const c = Math.min(SP.n-1, Math.max(0, Math.floor(to(x)*k))), y = LAY.sp + LAY.sph - SP.lev[c]/255*LAY.sph*.5; x ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.stroke();
+  } else { g.fillStyle = "#121724"; g.fillRect(0, LAY.sp, W, LAY.sph); g.fillStyle = "#8b92a8"; g.fillText("preparo lo spettrogramma…", 8, LAY.sp + 14); }
+  const pat = pattern(g);
+  // buchi senza registrazione
+  let prev = 0; const gaps = []; for (const p of PZ.concat([{i: B.dur, f: B.dur}])) { if (p.i > prev + .05) gaps.push([prev, p.i]); prev = Math.max(prev, p.f); }
+  for (const [a, b] of gaps) { const x1 = Math.max(xo(a), 0), x2 = Math.min(xo(b), W); if (x2 <= x1) continue;
+    g.fillStyle = "#0a0d14"; g.fillRect(x1, LAY.sp, x2 - x1, LAY.sph); g.fillStyle = pat; g.globalAlpha = .5; g.fillRect(x1, LAY.sp, x2 - x1, LAY.sph); g.globalAlpha = 1;
+    if (x2 - x1 > 120) { g.fillStyle = "#8b92a8"; g.textAlign = "center"; g.fillText("nessuna registrazione", (x1 + x2)/2, LAY.sp + LAY.sph/2); g.textAlign = "left"; } }
+  // tratti esclusi (dispositivo che suona / fuori stanza): grigio tratteggiato con scritta
+  for (const e of B.esclusioni || []) { const x1 = Math.max(xo(e.i), 0), x2 = Math.min(xo(e.f), W); if (x2 <= x1) continue;
+    g.fillStyle = e.blocca ? "rgba(20,22,30,.72)" : "rgba(120,120,130,.18)"; g.fillRect(x1, LAY.sp, x2 - x1, LAY.md - LAY.sp);
+    g.fillStyle = pat; g.fillRect(x1, LAY.sp, x2 - x1, LAY.md - LAY.sp);
+    if (x2 - x1 > 40) { g.save(); g.beginPath(); g.rect(x1, LAY.sp, x2 - x1, LAY.sph); g.clip(); g.fillStyle = "#ffd9a0"; g.textAlign = "left"; g.font = "600 12px system-ui"; g.fillText((e.blocca ? "🔇 " : "ℹ️ ") + e.testo, Math.max(x1, 0) + 6, LAY.sp + 14); g.restore(); g.font = "11px system-ui"; } }
+  // etichette (sovrapposte su corsie diverse)
+  const L = lanes();
+  for (const x of B.intervalli) {
+    if (x.f < V.a || x.i > V.a + V.span) continue;
+    const x1 = Math.max(xo(x.i), -2), x2 = Math.min(xo(x.f), W + 2), y = LAY.ln + L.of[x.id]*18, w = Math.max(x2 - x1, 2), esc = bloccato(x.i, x.f, x.cat);
+    g.globalAlpha = x.fonte === "bot-freccia" ? .42 : x.fonte === "bot" ? .82 : 1; g.fillStyle = colore(x.cat); rr(g, x1 + 1, y, Math.max(w - 2, 2), 16, 6); g.fill(); g.globalAlpha = 1;
+    if (x.stato === "da_confermare") { g.strokeStyle = "#fff"; g.lineWidth = 1.2; g.setLineDash([4, 3]); rr(g, x1 + 1.5, y + .5, Math.max(w - 3, 2), 15, 6); g.stroke(); g.setLineDash([]); }
+    if (esc) { g.fillStyle = pat; rr(g, x1 + 1, y, Math.max(w - 2, 2), 16, 6); g.fill(); }
+    if (x.id === CUR) { g.strokeStyle = "#fff"; g.lineWidth = 2; rr(g, x1 + 1, y, Math.max(w - 2, 2), 16, 6); g.stroke(); }
+    if (w > 24) { g.fillStyle = "#0b0e15"; g.textAlign = "left"; g.save(); g.beginPath(); g.rect(x1, y, w, 16); g.clip(); g.fillText((esc ? "⚠ " : "") + emo(x.cat) + (w > 90 ? " " + nome(x.cat) : ""), x1 + 4, y + 9); g.restore(); }
+  }
+  // riga BOZZA: pezzi proposti (tenui, bordo tratteggiato) al livello dello zoom
+  g.fillStyle = "#8b92a8"; g.textAlign = "left"; g.font = "10px system-ui"; g.fillText(DRAFT ? "BOZZA · " + livZoom() : "bozza in calcolo…", 4, LAY.lb + 12); g.font = "11px system-ui";
+  for (const p of bozze()) { const x1 = Math.max(xo(p.i), -2), x2 = Math.min(xo(p.f), W + 2), w = Math.max(x2 - x1, 2), y = LAY.lb + 1;
+    g.globalAlpha = .3; g.fillStyle = p.cat === "?" ? "#8b92a8" : colore(p.cat); rr(g, x1 + 1, y, Math.max(w - 2, 2), 21, 7); g.fill(); g.globalAlpha = 1;
+    g.strokeStyle = p.cat === "?" ? "#8b92a8" : colore(p.cat); g.lineWidth = p.id === CUR ? 2.5 : 1.2; g.setLineDash([4, 3]); rr(g, x1 + 1.5, y + .5, Math.max(w - 3, 2), 20, 7); g.stroke(); g.setLineDash([]);
+    if (w > 22) { g.fillStyle = "#e9ebf2"; g.save(); g.beginPath(); g.rect(x1, y, w, 21); g.clip(); g.fillText((p.cat === "?" ? "❔" : emo(p.cat)) + (w > 90 ? " " + (p.cat === "?" ? "da classificare" : nome(p.cat)) : ""), x1 + 4, y + 11); g.restore(); } }
+  // tagli trascinabili (grip tondo + linea)
+  G_CUTS = tagli(); let ult = -99;
+  for (const c of G_CUTS.sort((a, b) => a.t - b.t)) { const x = xo(c.t); if (x < 0 || x > W || x - ult < 9) continue; ult = x; const dr = c.kind === "d";
+    const ys = dr ? [LAY.lb + 1, LAY.lb + 22] : (() => { const r = [...c.E, ...c.S].map(id => L.of[id]).filter(v => v != null); return [LAY.ln + Math.min(...r)*18, LAY.ln + Math.max(...r)*18 + 16]; })();
+    g.strokeStyle = "#fff"; g.lineWidth = 2; g.beginPath(); g.moveTo(x, ys[0]); g.lineTo(x, ys[1]); g.stroke();
+    g.fillStyle = dr ? "#ffd9a0" : "#fff"; g.beginPath(); g.arc(x, (ys[0] + ys[1])/2, 6, 0, 7); g.fill(); }
+  g.strokeStyle = "#2b3248"; g.lineWidth = 1; g.beginPath(); g.moveTo(0, LAY.md - .5); g.lineTo(W, LAY.md - .5); g.stroke();
+  // modelli (riferimento): piu' preciso = piu' scuro
+  B.modelli.forEach((m, r) => {
+    const y = LAY.md + 1 + r*14, Lm = LIVL[m.livello] || 55, x0 = Math.max(xo(m.cop[0]), 0), x1c = Math.min(xo(m.cop[1]), W);
+    g.fillStyle = "#121724"; g.fillRect(0, y, W, 12); g.fillStyle = "#1b2233"; g.fillRect(x0, y, Math.max(x1c - x0, 0), 12);
+    for (const [o, res, cats] of m.celle) { const a = xo(o), b = xo(o + res); if (b < 0 || a > W) continue; const h = 12/cats.length;
+      cats.forEach((c, j) => { g.fillStyle = colore(c, Lm); g.fillRect(a, y + j*h, Math.max(b - a, 1), h); }); }
+    g.fillStyle = "#fff"; g.textAlign = "left"; g.shadowColor = "#000"; g.shadowBlur = 3; g.fillText(m.nome, 4, y + 7); g.shadowBlur = 0;
+  });
+  // selezione con maniglie grandi
+  if (SEL) { const x1 = xo(SEL.a), x2 = xo(SEL.b), bl = bloccato(SEL.a, SEL.b), mid = LAY.sp + LAY.sph/2;
+    g.fillStyle = bl ? "rgba(255,120,80,.25)" : "rgba(108,176,255,.26)"; g.fillRect(x1, LAY.sp, x2 - x1, H - LAY.sp);
+    g.strokeStyle = bl ? "#ff8a5c" : "#6cb0ff"; g.lineWidth = 2; g.beginPath(); g.moveTo(x1, LAY.sp); g.lineTo(x1, H); g.moveTo(x2, LAY.sp); g.lineTo(x2, H); g.stroke();
+    for (const x of [x1, x2]) { g.fillStyle = bl ? "#ff8a5c" : "#6cb0ff"; g.beginPath(); g.arc(x, mid, 15, 0, 7); g.fill(); g.fillStyle = "#0b0e15"; g.fillRect(x - 5, mid - 7, 2, 14); g.fillRect(x + 3, mid - 7, 2, 14); } }
+  const px = xo(HEAD); if (px >= 0 && px <= W) { g.strokeStyle = "#fff"; g.lineWidth = 2; g.beginPath(); g.moveTo(px, 0); g.lineTo(px, H); g.stroke(); }
+  $("ora").textContent = clock(HEAD) + (B.tipo === "blocco" ? " / " + fmt(B.dur) : "");
+  $("vis").textContent = V.span >= 600 ? Math.round(V.span/60) + " min" : Math.round(V.span) + " s";
+  overview(dpr);
+}
+const MINW = 44; // larghezza minima del riquadro (px), indipendente dallo zoom
+function barre() { // [{cv, a0, a1}]: panoramica + (se il riquadro e' piccolo) lente intorno alla vista
+  const [a0, a1] = ovRange(), w = cvO.clientWidth || 300, out = [{cv: cvO, a0, a1}];
+  if (V.span / (a1 - a0) * w < 70 && V.span * 3 < a1 - a0) { const L = Math.min(Math.max(V.span * 4, 60), a1 - a0), c = V.a + V.span / 2, l0 = Math.min(Math.max(c - L / 2, a0), a1 - L); out.push({cv: cvL, a0: l0, a1: l0 + L, lens: true}); }
+  return out;
+}
+function rett(b) { const w = b.cv.clientWidth || 300, f = w / (b.a1 - b.a0); let x1 = (V.a - b.a0) * f, x2 = (V.a + V.span - b.a0) * f; if (x2 - x1 < MINW) { const m = (x1 + x2) / 2; x1 = Math.min(Math.max(m - MINW / 2, 0), w - MINW); x2 = x1 + MINW; } return {x1, x2, f, w}; }
+function overview(dpr) {
+  const bs = barre(); cvL.classList.toggle("nasc", bs.length < 2);
+  for (const b of bs) draw1(b, dpr);
+}
+function draw1(b, dpr) {
+  const g = b.cv.getContext("2d"), w = b.cv.width/dpr, h = 44, {a0, a1} = b, f = w/(a1 - a0), xs = t => (t - a0)*f;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  if (SP) { const k = 1/SP.hop; g.drawImage(SP.img, a0*k, 0, (a1 - a0)*k, SP.bins, 0, 0, w, h); } else { g.fillStyle = "#121724"; g.fillRect(0, 0, w, h); }
+  for (const x of B.intervalli) { g.globalAlpha = x.fonte === "bot-freccia" ? .45 : .95; g.fillStyle = colore(x.cat); g.fillRect(xs(x.i), h - 6, Math.max((x.f - x.i)*f, 1.5), 5); } g.globalAlpha = 1;
+  for (const e of B.esclusioni || []) { g.fillStyle = "rgba(255,200,120,.5)"; g.fillRect(xs(e.i), 0, Math.max((e.f - e.i)*f, 1.5), 3); }
+  g.fillStyle = "rgba(255,90,90,.75)"; g.fillRect(xs(a0), 4, (a1 - a0)*f, 3);
+  g.fillStyle = "#4cd27a"; for (const p of PZ) g.fillRect(xs(p.i), 4, Math.max((p.f - p.i)*f, 1.5), 3);
+  const {x1, x2} = rett(b);
+  g.fillStyle = "rgba(255,255,255,.16)"; g.fillRect(x1, 0, x2 - x1, h);
+  g.strokeStyle = "#fff"; g.lineWidth = 2; g.beginPath(); g.moveTo(x1, 1); g.lineTo(x2, 1); g.moveTo(x1, h - 1); g.lineTo(x2, h - 1); g.stroke();
+  g.fillStyle = "#fff"; for (const x of [x1, x2]) { rr(g, x - 5, 3, 10, h - 6, 5); g.fill(); g.fillStyle = "#0b0e15"; g.fillRect(x - 1, 12, 2, h - 24); g.fillStyle = "#fff"; }
+  g.strokeStyle = "#ff0"; g.lineWidth = 1; g.beginPath(); g.moveTo(xs(HEAD), 0); g.lineTo(xs(HEAD), h); g.stroke();
+  if (OVG && OVG.cv === b.cv) { const t = clock(V.a) + " – " + clock(V.a + V.span); g.font = "600 13px system-ui"; g.textAlign = "center"; g.textBaseline = "middle"; const tw = g.measureText(t).width + 16, cx = Math.min(Math.max((x1 + x2)/2, tw/2 + 2), w - tw/2 - 2);
+    g.fillStyle = "rgba(10,13,20,.88)"; rr(g, cx - tw/2, 11, tw, 22, 8); g.fill(); g.fillStyle = "#fff"; g.fillText(t, cx, 22); g.textAlign = "left"; g.font = "11px system-ui"; }
+}
+let OVG = null;  // gesto in corso sulla panoramica {mode: m|l|r, off}
+addEventListener("resize", disegna); addEventListener("orientationchange", () => setTimeout(disegna, 250));
+
+// ---------- selezione smart
+const P = new Map(); let G = null, lastTap = {t: 0, x: 0}, raf = 0;
+const HR = 26; // raggio di tocco delle maniglie
+function maniglia(x, y) { if (!SEL || y < LAY.sp || y > LAY.sp + LAY.sph) return null; const da = Math.abs(x - xo(SEL.a)), db = Math.abs(x - xo(SEL.b)); if (Math.min(da, db) > HR) return null; return da <= db ? "a" : "b"; }
+function trascina() { // aggiorna selezione/maniglia dal dito, con pan automatico (e zoom indietro) ai bordi
+  if (!G || (G.mode !== "sel" && G.mode !== "handle") || !B) return;
+  const E = 40, ex = G.ex, dir = ex < E ? -1 : ex > W - E ? 1 : 0;
+  if (dir) { const f = (dir < 0 ? E - ex : ex - (W - E))/E, a0 = V.a; V.a = clampA(V.a + dir*V.span*.012*Math.min(f + .2, 1.4));
+    if (V.a === a0 && V.span < B.dur) zoom(1.015, dir < 0 ? V.a : V.a + V.span); }
+  const t = Math.min(Math.max(sn(to(Math.min(Math.max(ex, 0), W))), 0), B.dur);
+  if (G.mode === "sel") { SEL = {a: Math.min(G.t0, t), b: Math.max(G.t0, t)}; CUR = null; }
+  else { const o = G.h === "a" ? SEL.b : SEL.a; SEL = {a: Math.min(o, t), b: Math.max(o, t)}; G.h = t < o ? "a" : "b"; }
+  disegna();
+  if (dir) raf = requestAnimationFrame(trascina);
+}
+cvM.addEventListener("pointerdown", e => { cvM.setPointerCapture(e.pointerId); P.set(e.pointerId, {x: e.offsetX, y: e.offsetY}); if (!B) return;
+  if (P.size === 1) {
+    const h = maniglia(e.offsetX, e.offsetY), ct = tagliAt(e.offsetX, e.offsetY);
+    if (ct) { G = {mode: "cut", cut: ct, ex: e.offsetX, x0: e.offsetX, mosso: false, timer: setTimeout(() => { if (G && G.mode === "cut" && !G.mosso) { G.lungo = true; eliminaTaglio(G.cut); } }, 520)}; try { navigator.vibrate && navigator.vibrate(8); } catch (_) {} }
+    else if (h) G = {mode: "handle", h, ex: e.offsetX, old: {...SEL}};
+    else G = {mode: "att", x0: e.offsetX, y0: e.offsetY, t0: to(e.offsetX), ex: e.offsetX};
+  } else { const [p, q] = [...P.values()]; G = {mode: "pinch", d: Math.hypot(p.x - q.x, p.y - q.y), c: to((p.x + q.x)/2)}; } });
+cvM.addEventListener("pointermove", e => { if (!P.has(e.pointerId) || !G || !B) return; P.set(e.pointerId, {x: e.offsetX, y: e.offsetY});
+  if (G.mode === "pinch" && P.size >= 2) { const [p, q] = [...P.values()], d = Math.hypot(p.x - q.x, p.y - q.y), mx = (p.x + q.x)/2;
+    V.span = Math.min(Math.max(V.span*G.d/Math.max(d, 8), 10), B.dur); V.a = clampA(G.c - mx/W*V.span); G.d = d; disegna(); return; }
+  G.ex = e.offsetX;
+  if (G.mode === "cut") { if (!G.mosso && Math.abs(e.offsetX - G.x0) < 6) return; G.mosso = true; clearTimeout(G.timer); muoviTaglio(G.cut, to(Math.min(Math.max(e.offsetX, 0), W))); return; }
+  if (G.mode === "att" && Math.abs(e.offsetX - G.x0) > 7) { G.mode = "sel"; G.t0 = sn(G.t0); }
+  cancelAnimationFrame(raf); trascina(); });
+function fineTocco(e) { if (!P.has(e.pointerId)) return; P.delete(e.pointerId); cancelAnimationFrame(raf); if (!G || !B) return;
+  if (G.mode === "cut") { clearTimeout(G.timer); if (G.mosso) fineTaglio(G.cut); }
+  else if (G.mode === "sel") { if (SEL && SEL.b - SEL.a < .3) SEL = null; pannello(); disegna(); }
+  else if (G.mode === "handle") { pannello(); disegna(); if (CUR && SEL && (SEL.a !== G.old.a || SEL.b !== G.old.b)) { if (bozzaDi(CUR)) bozzaSposta(CUR, SEL.a, SEL.b); else salva({op: "upd", id: CUR, i: SEL.a, f: SEL.b}); } }
+  else if (G.mode === "att") {
+    const t = G.t0, L = lanes(), r = Math.floor((G.y0 - LAY.ln)/18), now = Date.now();
+    if (G.y0 >= LAY.lb && G.y0 < LAY.ln) { const h = bozze().find(x => x.i <= t && x.f >= t); if (h) { CUR = h.id; SEL = {a: h.i, b: h.f}; pannello(); disegna(); } }
+    else if (G.y0 >= LAY.ln && G.y0 < LAY.md) { const h = B.intervalli.filter(x => L.of[x.id] === r && x.i <= t && x.f >= t).pop(); if (h) { CUR = h.id; SEL = {a: h.i, b: h.f}; pannello(); disegna(); } }
+    else if (G.y0 >= LAY.sp && G.y0 < LAY.sp + LAY.sph && now - lastTap.t < 380 && Math.abs(G.x0 - lastTap.x) < 30) { lastTap.t = 0; espandi(t); }
+    else { lastTap = {t: now, x: G.x0}; vaiA(t, !au.paused); } }
+  if (P.size === 0) G = null; else if (P.size === 1) G = {mode: "none"}; }
+cvM.addEventListener("pointerup", fineTocco); cvM.addEventListener("pointercancel", fineTocco);
+cvM.addEventListener("wheel", e => { e.preventDefault(); zoom(e.deltaY > 0 ? 1.25 : .8, to(e.offsetX)); }, {passive: false});
+
+// ---------- tagli stile CapCut: sposta, elimina (tieni premuto), taglia qui
+function tagliAt(x, y) {
+  if (!B || y < LAY.lb || y >= LAY.md) return null;
+  let best = null, bd = 17;
+  for (const c of G_CUTS || []) { const d = Math.abs(xo(c.t) - x); if (d < bd) { bd = d; best = c; } }
+  return best;
+}
+function perId(id) { return bozzaDi(id) || B.intervalli.find(x => x.id === id); }
+function limiti(c) { return [Math.max(...c.E.map(id => perId(id).i)) + .2, Math.min(...c.S.map(id => perId(id).f)) - .2]; }
+function muoviTaglio(c, t) { // anteprima fluida: sposta il confine di tutti i pezzi che finiscono/iniziano qui
+  const [lo, hi] = limiti(c); if (hi < lo) return; t = Math.min(Math.max(sn(t), lo), hi);
+  if (G && G.cut === c && G.v0 === undefined) G.v0 = [...c.E.map(id => [id, "f", perId(id).f]), ...c.S.map(id => [id, "i", perId(id).i])];
+  c.E.forEach(id => perId(id).f = t); c.S.forEach(id => perId(id).i = t); c.t = t; SEL = null; pannello(); disegna();
+}
+function fineTaglio(c) { // rilascio: bozza = solo locale; etichette vere = salvate subito (un colpo solo)
+  if (c.kind === "d") return salvaBozzaPezzi([perId(c.E[0]), perId(c.S[0])], false);
+  const v0 = G && G.v0;
+  salva({op: "lot", ops: [...c.E.map(id => ({op: "upd", id, f: perId(id).f})), ...c.S.map(id => ({op: "upd", id, i: perId(id).i}))]}, false, null, false, v0);
+}
+function eliminaTaglio(c) { // unisce i due pezzi: il sinistro si allunga fino alla fine del destro
+  try { navigator.vibrate && navigator.vibrate(25); } catch (_) {}
+  const a = perId(c.E[0]), b = perId(c.S[0]);
+  if (c.kind === "d") { const l = a.id.split(":")[1]; a.f = b.f; DRAFT[l] = DRAFT[l].filter(x => x !== b); salvaBozzaPezzi([a], false); return disegna(); }
+  salva({op: "lot", ops: [{op: "upd", id: a.id, f: b.f}, {op: "del", id: b.id}]}); SEL = null; CUR = null;
+}
+$("bNuova").onclick = () => { // crea un pezzo alla linea di riproduzione (anche sopra altri: si sovrappongono); poi si sceglie la categoria
+  if (!B) return; const len = Math.max(2, Math.round(V.span/20)), a = Math.min(sn(HEAD), Math.max(B.dur - .5, 0)), b = Math.min(B.dur, a + len);
+  SEL = {a, b}; CUR = null; if (b > V.a + V.span || a < V.a) V.a = clampA(a - V.span*.1);
+  msg("Nuovo pezzo: scegli la categoria (anche sopra altri pezzi)", false, true); pannello(); disegna(); try { $("pan").scrollIntoView({block: "nearest", behavior: "smooth"}); } catch (e) {}
+};
+$("bTaglia").onclick = () => { // taglia alla linea di riproduzione: il pezzo selezionato, altrimenti la bozza sotto la linea, altrimenti l'unica etichetta
+  if (!B) return; const t = Math.round(HEAD*10)/10;
+  const cur = perId(CUR), bz = bozze().find(x => x.i < t - .2 && x.f > t + .2), vv = B.intervalli.filter(x => x.i < t - .2 && x.f > t + .2);
+  const x = cur && cur.i < t - .2 && cur.f > t + .2 ? cur : bz || (vv.length === 1 ? vv[0] : null);
+  if (!x) return msg(vv.length > 1 ? "Piu pezzi sotto la linea: selezionane uno" : "Nessun pezzo da tagliare qui", true, true);
+  if (bozzaDi(x.id)) { const L = DRAFT[x.id.split(":")[1]], k = L.indexOf(x); const h1 = {...x, f: t}, h2 = {...x, i: t, id: x.id + "t"}; L.splice(k, 1, h1, h2); salvaBozzaPezzi([h1, h2], false); return disegna(); }
+  salva({op: "lot", ops: [{op: "upd", id: x.id, f: t}, {op: "add", i: t, f: x.f, cat: x.cat}]});
+};
+// conferma tutto cio che vedo: le bozze in vista (centro nella finestra) diventano etichette, fonte=miniapp_bozza_confermata
+$("bConf").onclick = () => {
+  if (!B) return;
+  const v = bozze().filter(p => p.cat !== "?" && (p.i + p.f)/2 >= V.a && (p.i + p.f)/2 <= V.a + V.span && !nelBuco(p.i, p.f) && !bloccato(p.i, p.f, p.cat));
+  const dc = B.intervalli.filter(x => x.stato === "da_confermare" && (x.i + x.f)/2 >= V.a && (x.i + x.f)/2 <= V.a + V.span);
+  if (!v.length && !dc.length) return msg("Niente da confermare in vista", false, true);
+  salva({op: "lot", soft: true, ops: [...v.map(p => ({op: "add", i: p.i, f: p.f, cat: p.cat, fonte: "miniapp_bozza_confermata"})), ...dc.map(x => ({op: "conf", id: x.id}))]});
+};
+function bozzaSposta(id, a, b) { // maniglie/nudge su un pezzo di bozza: sposta anche il confine del vicino se combacia
+  const L = DRAFT[id.split(":")[1]], p = L.find(x => x.id === id), k = L.indexOf(p), prima = L[k - 1], dopo = L[k + 1];
+  if (prima && Math.abs(prima.f - p.i) < .06) prima.f = a;
+  if (dopo && Math.abs(dopo.i - p.f) < .06) dopo.i = b;
+  p.i = a; p.f = b; salvaBozzaPezzi([p, prima && Math.abs(prima.f - a) < .06 ? prima : null, dopo && Math.abs(dopo.i - b) < .06 ? dopo : null], true); disegna();
+}
+
+// doppio tocco: espande all'evento = fin dove il livello torna al fondo (percentile basso della zona)
+function espandi(t) {
+  let a = t - 1, b = t + 1;
+  if (SP) {
+    const k = 1/SP.hop, lev = SP.lev, n = SP.n, c = Math.min(n - 1, Math.max(0, Math.round(t*k)));
+    const sm = i => { let s = 0, m = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < n) { s += lev[j]; m++; } return s/m; };
+    const w0 = Math.max(0, c - 600), w1 = Math.min(n, c + 600), arr = []; for (let i = w0; i < w1; i += 2) arr.push(lev[i]); arr.sort((x, y) => x - y);
+    const bg = arr[Math.floor(arr.length*.25)] || 0; let pk = c, pv = sm(c);
+    for (let i = Math.max(0, c - 20); i < Math.min(n, c + 20); i++) if (sm(i) > pv) { pv = sm(i); pk = i; }
+    if (pv - bg >= 15) {
+      const thr = bg + .35*(pv - bg), GAP = Math.round(1.0*k); let l = pk, r = pk, gap = 0;
+      for (let i = pk; i >= 0 && i > pk - 1200; i--) { if (sm(i) >= thr) { l = i; gap = 0; } else if (++gap > GAP) break; }
+      gap = 0; for (let i = pk; i < n && i < pk + 1200; i++) { if (sm(i) >= thr) { r = i; gap = 0; } else if (++gap > GAP) break; }
+      a = l/k; b = (r + 1)/k;
+    }
+  }
+  a = Math.max(0, sn(a)); b = Math.min(B.dur, sn(b)); if (b - a < .5) b = Math.min(B.dur, a + .5);
+  SEL = {a, b}; CUR = null; msg("evento " + (b - a).toFixed(1) + " s: sistema i bordi con le maniglie", false, true); pannello(); disegna();
+}
+
+// panoramica + lente: finestra trascinabile (non salta), bordi ridimensionabili, snap ai minuti, doppio tocco = zoom
+const snapOv = t => V.span >= 300 ? Math.round((B.t0s + t)/60)*60 - B.t0s : V.span >= 60 ? Math.round(t) : Math.round(t*2)/2;
+let ovTap = {t: 0, x: 0};
+for (const cv of [cvO, cvL]) {
+  const bar = () => barre().find(b => b.cv === cv), tt = (e, b) => b.a0 + Math.min(Math.max(e.offsetX/cv.clientWidth, 0), 1)*(b.a1 - b.a0);
+  cv.addEventListener("pointerdown", e => { const b = B && bar(); if (!b) return; cv.setPointerCapture(e.pointerId);
+    const {x1, x2} = rett(b), x = e.offsetX, now = Date.now(), t = tt(e, b), big = x2 - x1 > 70;
+    if (now - ovTap.t < 350 && Math.abs(x - ovTap.x) < 30) { ovTap.t = 0; V.span = Math.min(B.dur, Math.max(10, V.span > 60 ? 60 : V.span/2)); V.a = clampA(t - V.span/2); OVG = null; return disegna(); }
+    ovTap = {t: now, x};
+    if (big && Math.abs(x - x1) <= 20) OVG = {cv, mode: "l"};
+    else if (big && Math.abs(x - x2) <= 20) OVG = {cv, mode: "r"};
+    else if (x >= x1 - 6 && x <= x2 + 6) OVG = {cv, mode: "m", off: t - (V.a + V.span/2)};
+    else { V.a = clampA(snapOv(t - V.span/2)); OVG = {cv, mode: "m", off: 0}; }
+    disegna(); });
+  cv.addEventListener("pointermove", e => { if (!OVG || OVG.cv !== cv || !B) return; const b = bar(); if (!b) return; const t = tt(e, b);
+    if (OVG.mode === "m") V.a = clampA(snapOv(t - OVG.off - V.span/2));
+    else if (OVG.mode === "l") { const end = V.a + V.span, a = Math.max(0, Math.min(snapOv(t), end - 10)); V.a = a; V.span = end - a; }
+    else { const end = Math.min(B.dur, Math.max(snapOv(t), V.a + 10)); V.span = end - V.a; }
+    disegna(); });
+  cv.addEventListener("pointerup", () => { OVG = null; if (B) disegna(); }); cv.addEventListener("pointercancel", () => { OVG = null; if (B) disegna(); });
+}
+
+// swipe tra unita' (barra del titolo) + frecce
+let sx = null; const tit = $("titolo");
+tit.addEventListener("touchstart", e => sx = e.touches[0].clientX, {passive: true});
+tit.addEventListener("touchend", e => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 50) vai(dx < 0 ? 1 : -1); }, {passive: true});
+function vai(d) { const id = B && (d > 0 ? B.succ : B.prec); if (id) apri(id); }
+$("bPrec").onclick = () => vai(-1); $("bSucc").onclick = () => vai(1);
+addEventListener("keydown", e => { if (e.key === "ArrowRight") vai(1); else if (e.key === "ArrowLeft") vai(-1); else if (e.key === " ") { e.preventDefault(); $("bPlay").click(); } else if (e.key === "z" && (e.ctrlKey || e.metaKey)) undo(); });
+
+// ---------- pannello categorie / modifica
+function pannello() {
+  const p = $("pan"); p.classList.toggle("nasc", !SEL); if (!SEL || !EL) return;
+  const bz = bozzaDi(CUR), x = CUR && (B.intervalli.find(i => i.id === CUR) || bz), buco = nelBuco(SEL.a, SEL.b), tot = bloccato(SEL.a, SEL.b, undefined);
+  $("selinfo").textContent = `${x ? "Intervallo" : "Selezione"} ${clock(SEL.a)} → ${clock(SEL.b)} · ${(SEL.b - SEL.a).toFixed(1)} s` + (x ? ` · ${emo(x.cat)} ${nome(x.cat)}${bz ? " · BOZZA (" + bz.src + ")" : x.fonte.startsWith("bot") ? " (dal bot)" : ""}` : "");
+  if (x && x.stato === "da_confermare") $("selinfo").textContent += " · da confermare";
+  const av = buco ? "Nessuna registrazione qui: non si puo' etichettare." : tot ? `🔇 ${tot.testo}: ${tot.blocca === "tutto" ? "non si etichetta" : "le categorie della persona sono bloccate"}.` : "";
+  $("avviso").textContent = av; $("avviso").classList.toggle("nasc", !av);
+  $("bAltra").classList.toggle("nasc", !x || !!bz); $("bDel").classList.toggle("nasc", !x || !!bz);
+  $("bConfPezzo").classList.toggle("nasc", !(bz ? bz.cat !== "?" : x && x.stato === "da_confermare")); $("bConfPezzo").textContent = x ? "✓ conferma " + emo(x.cat) : "";
+  $("cats").innerHTML = EL.categorie.map(c => { const no = buco || bloccato(SEL.a, SEL.b, c);
+    return `<button class="cat${x && x.cat === c ? " cur" : ""}" data-c="${c}" ${no ? "disabled" : ""} style="border-left-color:${colore(c)}"><span class="e">${emo(c)}</span><span>${nome(c)}</span></button>`; }).join("");
+}
+function assegna(cat) { // una categoria alla selezione / al pezzo corrente (pulsanti e traccia a gesto)
+  const bz = bozzaDi(CUR); usata(cat);
+  if (bz) salva({op: "add", i: bz.i, f: bz.f, cat, fonte: cat === bz.cat ? "miniapp_bozza_confermata" : "miniapp"}, true);
+  else if (CUR) salva({op: "upd", id: CUR, cat}); else if (SEL) salva({op: "add", i: SEL.a, f: SEL.b, cat}, true); }
+$("cats").onclick = e => { const c = e.target.closest("button.cat"); if (!c || c.disabled) return; assegna(c.dataset.c); };
+
+// e velocemente faccio una combinazione gia' preparata, senza scrivere"). Albero = le categorie "base/dettaglio/..."
+// gia' esistenti; ★ = le combinazioni piu' usate (uso salvato solo su questo telefono, localStorage).
+const USO_K = "sonno_uso_cat";
+function usata(c) { try { const u = JSON.parse(localStorage.getItem(USO_K) || "{}"); u[c] = (u[c] || 0) + 1; localStorage.setItem(USO_K, JSON.stringify(u)); } catch (e) {} }
+function preferite() {
+  let u = {}; try { u = JSON.parse(localStorage.getItem(USO_K) || "{}"); } catch (e) {}
+  (B && B.intervalli || []).forEach(i => { if (i.cat) u[i.cat] = (u[i.cat] || 0) + .5; });
+  return Object.keys(u).filter(c => EL.categorie.includes(c)).sort((a, b) => u[b] - u[a]).slice(0, 7);
+}
+function figli(pre) { // chiavi dei figli di un nodo: "" = radice (basi + ★), "★" = preferite (complete)
+  if (pre === "★") return preferite().map(c => ({k: c, foglia: true}));
+  const n = pre ? pre.split("/").length : 0, s = new Set();
+  EL.categorie.forEach(c => { const p = c.split("/"); if (p.length > n && (!pre || c.startsWith(pre + "/"))) s.add(p.slice(0, n + 1).join("/")); });
+  const out = [...s].map(k => ({k, foglia: !EL.categorie.some(c => c.startsWith(k + "/"))}));
+  return !pre && preferite().length ? [{k: "★", foglia: false}, ...out] : out;
+}
+let TR = null;
+function trDisegna() {
+  const o = $("orbe"); o.querySelectorAll(".bolla,#orbeTxt").forEach(x => x.remove());
+  const L = TR.liv[TR.liv.length - 1], W = innerWidth, H = innerHeight, n = L.nodi.length, R = Math.max(100, n * 14);
+  L.nodi.forEach((nd, j) => { const a = -Math.PI / 2 + 2 * Math.PI * j / n;
+    nd.x = Math.min(W - 40, Math.max(40, L.x + R * Math.cos(a))); nd.y = Math.min(H - 40, Math.max(70, L.y + R * Math.sin(a)));
+    const lab = L.k === "★" ? nd.k : nd.k.split("/").pop(), d = document.createElement("div"), no = nd.k !== "★" && SEL && (nelBuco(SEL.a, SEL.b) || bloccato(SEL.a, SEL.b, nd.k));
+    d.className = "bolla" + (TR.su === nd.k ? " su" : "") + (no ? " off" : ""); d.style.left = nd.x + "px"; d.style.top = nd.y + "px";
+    d.style.borderColor = TR.su === nd.k ? "" : (nd.k === "★" ? "var(--ac)" : colore(nd.k));
+    d.innerHTML = `<span class="e">${nd.k === "★" ? "★" : emo(nd.k)}</span><span>${nd.k === "★" ? "più usate" : nome(lab)}</span>`;
+    o.appendChild(d); });
+  const t = document.createElement("div"); t.id = "orbeTxt"; const c = trScelta();
+  t.textContent = c ? `${emo(c)} ${nome(c)} · stacca per salvare` : "trascina su una bolla"; o.appendChild(t);
+  $("orbeL").innerHTML = `<path d="M${TR.punti.map(p => p.join(",")).join(" L")}"/>`;
+}
+const trScelta = () => TR && (TR.su || (TR.liv.length > 1 && TR.liv[TR.liv.length - 1].k !== "★" ? TR.liv[TR.liv.length - 1].k : null));
+const hap = () => { try { tg && tg.HapticFeedback && tg.HapticFeedback.selectionChanged(); } catch (e) {} };
+$("bTraccia").addEventListener("pointerdown", e => {
+  if (!SEL || !EL) return; e.preventDefault(); $("bTraccia").setPointerCapture(e.pointerId);
+  TR = {liv: [{k: "", x: e.clientX, y: e.clientY, nodi: figli("")}], su: null, punti: [[e.clientX, e.clientY]]};
+  $("orbe").classList.remove("nasc"); trDisegna();
+});
+$("bTraccia").addEventListener("pointermove", e => {
+  if (!TR) return; const x = e.clientX, y = e.clientY, L = TR.liv[TR.liv.length - 1], d = (p, q) => Math.hypot(p.x - x, p.y - y);
+  if (TR.liv.length > 1) { const P = TR.liv[TR.liv.length - 2]; if (d(P) < 34) { TR.liv.pop(); TR.su = null; TR.punti.pop(); hap(); return trDisegna(); } }
+  const nd = L.nodi.find(q => d(q) < 38);
+  if (nd && nd.k !== TR.su) {
+    if (!nd.foglia) { TR.liv.push({k: nd.k, x: nd.x, y: nd.y, nodi: figli(nd.k)}); TR.su = null; TR.punti.push([nd.x, nd.y]); }
+    else TR.su = nd.k;
+    hap(); trDisegna();
+  } else if (!nd && TR.su && !L.nodi.some(q => q.k === TR.su && d(q) < 50)) { TR.su = null; trDisegna(); }
+});
+function trFine(salvare) {
+  if (!TR) return; const c = salvare ? trScelta() : null; TR = null; $("orbe").classList.add("nasc");
+  if (!c) return;
+  if (!EL.categorie.includes(c)) return msg(`"${nome(c)}" non e' una categoria: scegli un dettaglio`, true, true);
+  if (nelBuco(SEL.a, SEL.b) || bloccato(SEL.a, SEL.b, c)) return msg(`${nome(c)}: bloccata qui`, true, true);
+  try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred("success"); } catch (e) {}
+  assegna(c); msg(`${emo(c)} ${nome(c)} salvata`, false, true);
+}
+$("bTraccia").addEventListener("pointerup", () => trFine(true));
+$("bTraccia").addEventListener("pointercancel", () => trFine(false));
+$("bConfPezzo").onclick = () => { const bz = bozzaDi(CUR), x = !bz && CUR && B.intervalli.find(i => i.id === CUR); if (x && x.stato === "da_confermare") return salva({op: "conf", id: CUR}); if (bz && bz.cat !== "?") salva({op: "add", i: bz.i, f: bz.f, cat: bz.cat, fonte: "miniapp_bozza_confermata"}, true); };
+$("bDel").onclick = () => { if (CUR) { salva({op: "del", id: CUR}); CUR = null; SEL = null; } };
+$("bAltra").onclick = () => { CUR = null; pannello(); disegna(); };
+$("nudge").onclick = e => { const n = e.target.closest("button[data-n]"); if (!n) return; const k = n.dataset.n[0], d = parseFloat(n.dataset.n.slice(1));
+  const a = k === "i" ? Math.max(0, Math.min(SEL.a + d, SEL.b - .2)) : SEL.a, b = k === "f" ? Math.min(B.dur, Math.max(SEL.b + d, SEL.a + .2)) : SEL.b;
+  SEL = {a, b}; tieniIn(k === "i" ? a : b); if (bozzaDi(CUR)) { bozzaSposta(CUR, a, b); pannello(); } else if (CUR) salva({op: "upd", id: CUR, i: a, f: b}); else { pannello(); disegna(); } };
+
+// ---------- le bozze toccate o lasciate in vista si salvano SUBITO come da_confermare (poi, al massimo, conferma)
+const opBozza = p => ({op: "add", i: p.i, f: p.f, cat: p.cat, fonte: "miniapp_bozza", stato: "da_confermare"});
+function salvaBozzaPezzi(list, nuova) { const ops = list.filter(p => p && p.cat !== "?" && p.f - p.i >= .3).map(opBozza); if (ops.length) salva({op: "lot", soft: true, auto: true, ops}, nuova); }
+function opsVisibili() { return bozze().filter(p => p.cat !== "?" && p.f - p.i >= .3 && !nelBuco(p.i, p.f) && !bloccato(p.i, p.f, p.cat)).slice(0, 300).map(opBozza); }
+function salvaBozzeVisibili() { const ops = opsVisibili(); if (ops.length) salva({op: "lot", soft: true, auto: true, ops}); }
+function salvaInUscita() { // chiusura/background: sendBeacon con initData nel corpo (niente header); se non parte, in coda per la prossima apertura
+  if (!B || !DRAFT) return; const ops = opsVisibili(); if (!ops.length) return;
+  const body = JSON.stringify({op: "lot", soft: true, unita: B.id, ops, initData: INIT}); let ok = false;
+  try { ok = navigator.sendBeacon("/api/salva", new Blob([body], {type: "text/plain"})); } catch (e) {}
+  if (!ok) accoda({op: "lot", soft: true, unita: B.id, ops});
+}
+addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") salvaInUscita(); });
+addEventListener("pagehide", salvaInUscita);
+// coda dei salvataggi falliti (rete): in localStorage, rimandata all'apertura successiva; le add sono idempotenti sul server
+const QK = "sonno_coda";
+function leggiCoda() { try { return JSON.parse(localStorage.getItem(QK) || "[]"); } catch (e) { return []; } }
+function accoda(o) { try { const q = leggiCoda(); q.push(o); localStorage.setItem(QK, JSON.stringify(q.slice(-200))); } catch (e) {} }
+let flushing = false;
+async function svuotaCoda() {
+  if (flushing) return; flushing = true;
+  try { let q = leggiCoda(), n = 0;
+    while (q.length) { let r; try { r = await api("/api/salva", q[0]); } catch (e) { break; } if (r.status >= 500) break; q.shift(); n++; try { localStorage.setItem(QK, JSON.stringify(q)); } catch (e) {} }
+    if (n) { msg(n + " salvataggi in sospeso inviati ✓", false, true); if (B) { await ricarica(); disegna(); } } } finally { flushing = false; }
+}
+addEventListener("online", svuotaCoda);
+
+// ---------- salvataggio immediato, in coda, con annulla
+let coda = Promise.resolve();
+function aggiornaUndo() { $("bUndo").disabled = !UNDO.length; }
+function undo() { const u = UNDO.pop(); aggiornaUndo(); if (u) salva(u.o, false, u.unita, true); }
+$("bUndo").onclick = undo;
+function salva(o, nuova, unitaForzata, daUndo, v0) {
+  const conDispositivo = x => x.op === "add" && !x.dispositivo ? {...x, dispositivo: dispositivoAudio} : x;
+  o = o.op === "lot" ? {...o, ops: o.ops.map(conDispositivo)} : conDispositivo(o);
+  const unita = unitaForzata || B.id; msg("salvo…");
+  // valori di prima per l'annulla: gli upd (anche dentro un lot; v0 = [id, campo, valore] quando l'anteprima li ha gia' mossi)
+  const ops = o.op === "lot" ? o.ops : [o], vecchi = {};
+  for (const x of ops) if (x.op === "upd" && B) { const y = B.intervalli.find(i => i.id === x.id); if (y) vecchi[x.id] = {i: y.i, f: y.f, cat: y.cat}; }
+  if (v0) for (const [id, k, val] of v0) if (vecchi[id]) vecchi[id][k] = val;
+  coda = coda.then(async () => {
+    try {
+      const r = await api("/api/salva", {...o, unita}), j = await r.json().catch(() => ({}));
+      if (r.status >= 500) { accoda({...o, unita}); return msg("Server occupato: salvataggio in sospeso", true); }
+      if (!r.ok) { msg("Non salvato: " + (j.errore || r.status).replace(/^dati: /, ""), true); if (B && B.id === unita) await ricarica(); if (B) { pannello(); disegna(); } return; }
+      if (!daUndo && !o.auto) {
+        const nuovi = [].concat(j.nuovo || []), inv = [];
+        ops.forEach(x => { if (x.op === "del") inv.push({op: "res", id: x.id}); else if (x.op === "upd" && vecchi[x.id]) inv.push({op: "upd", id: x.id, ...vecchi[x.id]}); });
+        nuovi.forEach(id => inv.push({op: "del", id}));
+        if (inv.length) { UNDO.push({unita, o: inv.length === 1 ? inv[0] : {op: "lot", ops: inv.reverse()}}); aggiornaUndo(); } }
+      if (B && B.id === unita) { B.intervalli = j.intervalli;
+        if (nuova && j.nuovo) { CUR = [].concat(j.nuovo)[0]; const x = j.intervalli.find(i => i.id === CUR); if (x) SEL = {a: x.i, b: x.f}; }
+        else if (CUR && !bozzaDi(CUR) && !j.intervalli.some(i => i.id === CUR)) { CUR = null; SEL = null; } }
+      const sk = j.saltati ? ` (${j.saltati} non etichettabili saltati)` : "", nn = o.op === "lot" && o.soft ? ` ${[].concat(j.nuovo).length} pezzi` : "";
+      msg((daUndo ? "annullato" : "salvato") + nn + sk + " ✓ " + new Date().toTimeString().slice(0, 8), false, true); if (B) { pannello(); disegna(); }
+    } catch (e) { accoda({...o, unita}); msg("Rete assente: salvataggio in sospeso, riparte da solo", true); }
+  });
+}
+async function ricarica() { try { const b = await (await api("/api/blocco?id=" + B.id)).json(); B.intervalli = b.intervalli; } catch (e) {} }
+avvia().then(svuotaCoda);
+
+let RG = null, rgVista = "regole";
+const rgEsc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const rgH = t => { const m = /^(\d{1,2})(?::(\d{2}))?$/.exec(String(t).trim()); return m ? (+m[1]) + (+(m[2] || 0)) / 60 : null; };
+const rgX = h => ((h - 12 + 24) % 24) / 24 * 300 + 10;   // asse 12:00 -> 12:00, la notte al centro
+function rgAsse() {
+  let g = '<line x1="10" y1="22" x2="310" y2="22" stroke="currentColor" stroke-opacity=".3"/>';
+  [[12, 10], [18, rgX(18)], [0, rgX(0)], [6, rgX(6)], [12, 310]].forEach(([h, x]) =>
+    g += `<text x="${x}" y="34" font-size="8" text-anchor="middle" fill="currentColor" opacity=".6">${String(h).padStart(2, "0")}</text>`);
+  return g;
+}
+function rgFin(da, a, y, col, et) {
+  const x1 = rgX(rgH(da)), x2 = rgH(a) != null ? rgX(rgH(a)) : x1;
+  let r = "";
+  if (x2 > x1) r += `<rect x="${x1}" y="${y}" width="${x2 - x1}" height="8" rx="3" fill="${col}"/>`;
+  else { r += `<rect x="${x1}" y="${y}" width="${Math.max(310 - x1, 2)}" height="8" rx="3" fill="${col}"/>`; if (x2 > 10) r += `<rect x="10" y="${y}" width="${x2 - 10}" height="8" rx="3" fill="${col}"/>`; }
+  if (et) r += `<text x="10" y="${y - 2}" font-size="8" fill="currentColor" opacity=".8">${rgEsc(et)} ${rgEsc(da)}-${rgEsc(a)}</text>`;
+  return r;
+}
+function rgGrafica(r) {
+  const d = r.grafica_dati || {}, C = "var(--ac)";
+  if (r.grafica === "finestra_tempo" && rgH(d.da) != null)
+    return `<svg class="rgSv" viewBox="0 0 320 40">${rgFin(d.da, d.a ?? d.da, 10, C)}${rgAsse()}</svg>`;
+  if (r.grafica === "confronto" && Array.isArray(d.voci) && d.voci.length && rgH(d.voci[0].da) != null) {
+    const h = d.voci.length * 18 + 34; let g = "";
+    d.voci.forEach((v, i) => g += rgFin(v.da, v.a, 12 + i * 18, ["#6cb0ff", "#f0a040", "#7fd18b", "#c58cf0"][i % 4], v.nome));
+    return `<svg class="rgSv" viewBox="0 0 320 ${h}">${g}<g transform="translate(0,${h - 36})">${rgAsse()}</g></svg>`;
+  }
+  if (Array.isArray(d.valori)) {
+    const nums = d.valori.map(Number).filter(Number.isFinite), mx = Math.max(...nums, 1); let g = "";
+    d.valori.forEach((v, i) => { const w = (Number(v) || 0) / mx * 170;
+      g += `<text x="0" y="${i * 16 + 11}" font-size="9" fill="currentColor">${rgEsc((d.etichette || [])[i] ?? "")}</text><rect x="110" y="${i * 16 + 3}" width="${w}" height="10" rx="3" fill="${C}"/><text x="${114 + w}" y="${i * 16 + 11}" font-size="9" fill="currentColor">${rgEsc(v)}</text>`; });
+    return `<svg class="rgSv" viewBox="0 0 320 ${d.valori.length * 16 + 4}">${g}</svg>`;
+  }
+  if (r.grafica === "soglia" && d.valore != null && Number.isFinite(+d.valore)) {
+    const v = +d.valore, mx = v * 2 || 1, x = 10 + v / mx * 300;
+    return `<svg class="rgSv" viewBox="0 0 320 34"><rect x="10" y="8" width="${x - 10}" height="9" rx="3" fill="currentColor" opacity=".18"/><rect x="${x}" y="8" width="${310 - x}" height="9" rx="3" fill="${C}" opacity=".75"/><line x1="${x}" y1="4" x2="${x}" y2="21" stroke="currentColor" stroke-width="2"/><text x="${x}" y="31" font-size="9" text-anchor="middle" fill="currentColor">${rgEsc(v)} ${rgEsc(d.unita || "")}</text><text x="12" y="31" font-size="8.5" fill="currentColor" opacity=".7">${rgEsc(d.sotto || "")}</text><text x="308" y="31" font-size="8.5" text-anchor="end" fill="currentColor">${rgEsc(d.sopra || "")}</text></svg>`;
+  }
+  if (Array.isArray(d.passi)) return `<div class="rgSeq">${d.passi.map((p, i) => `<b>${i + 1}. ${rgEsc(p)}</b>`).join("<span>&rarr;</span>")}</div>`;
+  if (Array.isArray(d.stati)) return `<div class="rgSeq">${d.stati.map(p => `<b>${rgEsc(p)}</b>`).join("")}</div>`;
+  if (d.formula) return `<div class="rgSeq"><b>${rgEsc(d.formula)}</b></div>`;
+  return "";
+}
+function rgRegola(r) {
+  const cl = r.stato === "contraddizione" ? "contr" : r.stato === "disattivata" ? "off" : "";
+  const num = (r.numeri || []).length ? `<div class="rgN">${r.numeri.map(n => `<span>${rgEsc(n.cosa)}: <b>${rgEsc(n.valore)}</b> ${rgEsc(n.unita || "")}</span>`).join("")}</div>` : "";
+  return `<div class="rgR ${cl}"><h4>${rgEsc(r.nome)}<span class="rgB">${rgEsc(r.stato)}</span></h4><p>${rgEsc(r.definizione)}</p>${rgGrafica(r)}${num}` +
+    (r.note ? `<div class="rgNote">${rgEsc(r.note)}</div>` : "") + (r.perche ? `<div class="rgF">perch&eacute;: ${rgEsc(r.perche)}</div>` : "") +
+    `<div class="rgF">${rgEsc((r.fonte || []).join(" · "))}</div></div>`;
+}
+function rgMd(t) {
+  let o = "", tb = null;
+  const inl = x => rgEsc(x).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`(.+?)`/g, "<code>$1</code>");
+  const fl = () => { if (tb) { o += "<table>" + tb.map((r, i) => "<tr>" + r.map(c => i ? `<td>${c}</td>` : `<th>${c}</th>`).join("") + "</tr>").join("") + "</table>"; tb = null; } };
+  for (const l of t.split("\n")) {
+    if (/^\s*\|/.test(l)) { if (/^\s*\|[\s:\-|]+\|\s*$/.test(l)) continue; (tb = tb || []).push(l.trim().replace(/^\||\|$/g, "").split("|").map(c => inl(c.trim()))); continue; }
+    fl();
+    if (/^#{1,6} /.test(l)) o += `<h3>${inl(l.replace(/^#+ /, ""))}</h3>`;
+    else if (/^\s*[-*] /.test(l)) o += `<div>&bull; ${inl(l.replace(/^\s*[-*] /, ""))}</div>`;
+    else if (l.trim()) o += `<p>${inl(l)}</p>`;
+  }
+  fl(); return o;
+}
+function rgDisegna() {
+  const q = $("rgCerca").value.trim().toLowerCase(), c = $("rgCorpo");
+  $("rgCerca").hidden = rgVista !== "regole";
+  if (!RG) { c.textContent = "caricamento…"; return; }
+  if (rgVista === "numeri") { c.innerHTML = RG.numeri ? `<div class="mu">${rgEsc(RG.numeri_file)}</div>` + rgMd(RG.numeri) : "Nessuna verifica dei numeri ancora."; return; }
+  if (rgVista === "detto") { c.innerHTML = RG.scheda.testo ? `<div class="mu">ultima scheda della notte (${rgEsc(RG.scheda.day)})</div><pre>${rgEsc(RG.scheda.testo)}</pre>` : "Nessuna scheda ancora."; return; }
+  const R = RG.regole.filter(r => !q || JSON.stringify(r).toLowerCase().includes(q)), G = {};
+  for (const r of R) (G[r.gruppo] = G[r.gruppo] || []).push(r);
+  const nc = R.filter(r => r.stato === "contraddizione").length;
+  c.innerHTML = `<div class="mu">${R.length} regole${nc ? ` · <span style="color:#f0a040">${nc} contraddizioni</span>` : ""} · estratte dal codice, con file:riga</div>` +
+    Object.entries(G).map(([g, rs]) => `<details class="rgG"${q ? " open" : ""}><summary>${rgEsc(g)} · ${rs.length}${rs.some(r => r.stato === "contraddizione") ? " ⚠" : ""}</summary>${rs.map(rgRegola).join("")}</details>`).join("");
+}
+async function rgCarica() {
+  try { RG = await (await api("/api/regole")).json(); } catch (e) { $("rgCorpo").textContent = "Non riesco a caricare le regole (" + e.message + ")"; return; }
+  rgDisegna();
+}
+$("bRegole").onclick = () => { const on = !$("regole").classList.contains("on"); $("regole").classList.toggle("on", on); if (on && !RG) rgCarica(); };
+document.querySelectorAll(".rgtab button").forEach(b => b.onclick = () => { rgVista = b.dataset.v; document.querySelectorAll(".rgtab button").forEach(x => x.classList.toggle("on", x === b)); rgDisegna(); });
+$("rgCerca").oninput = rgDisegna;
+</script>
+</body>
+</html>

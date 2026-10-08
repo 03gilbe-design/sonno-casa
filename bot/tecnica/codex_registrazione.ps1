@@ -1,0 +1,1 @@
+cd C:\sonno_bot; codex exec -c model_reasoning_effort=medium -s workspace-write -C "C:\sonno_bot" --add-dir "C:\sonno_tex" "Leggi ux/nuvola/CODEX_REGISTRAZIONE.md e fai tutto quello che dice." *> C:\sonno_audio\codex_registrazione.log
