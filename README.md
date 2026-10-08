@@ -6,7 +6,9 @@ riascoltare la notte sullo spettrogramma ed etichettare i suoni in pochi secondi
 
 > Progetto personale, in sviluppo. Non è un dispositivo medico.
 
-![Una notte, tre registratori](esempi/scena_3d.png)
+| Di notte: il PC per terra nell'angolo, i due telefoni accanto | I tre dispositivi durante una calibrazione |
+|---|---|
+| ![Scena 3D](esempi/scena_3d.png) | ![Foto vera](esempi/foto_dispositivi.jpg) |
 
 ### La Mini App: mini mappa della notte in alto, spettrogramma sotto
 
@@ -45,10 +47,6 @@ i picchi e si capisce **da dove viene** (il russare dal letto, il traffico dalla
 ![Animazione: le posizioni si assestano](esempi/triangolazione/5_animazione.gif)
 
 ([video mp4](esempi/triangolazione/5_animazione.mp4))
-
-La disposizione vera, durante una calibrazione (schermo ed etichette sfocati):
-
-<img src="esempi/foto_dispositivi.jpg" width="520" alt="Telefoni e PC durante una calibrazione">
 
 ### Analisi della notte (schede del concept, notti finte)
 
