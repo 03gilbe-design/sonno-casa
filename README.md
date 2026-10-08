@@ -6,7 +6,11 @@ riascoltare la notte sullo spettrogramma ed etichettare i suoni in pochi secondi
 
 > Progetto personale, in sviluppo. Non è un dispositivo medico.
 
-![Mini App: spettrogramma](esempi/miniapp_spettrogramma.png)
+![Una notte, tre registratori](esempi/scena_3d.png)
+
+### La Mini App: mini mappa della notte in alto, spettrogramma sotto
+
+![Mini App: mini mappa e spettrogramma](esempi/miniapp_minimappa.png)
 
 ## Come è fatto
 
@@ -23,12 +27,41 @@ riascoltare la notte sullo spettrogramma ed etichettare i suoni in pochi secondi
 
 ![Grafo dei guasti](esempi/grafo_guasti.png)
 
+### La Mini App sul telefono
+
+<img src="esempi/miniapp_spettrogramma.png" width="360" alt="Mini App"> <img src="esempi/miniapp_pannello.png" width="360" alt="Pannello etichette">
+
 ### Etichette a gesto ("come la scrittura a scorrimento della tastiera")
 
 Tieni premuto **✍ traccia**, trascina il dito sulle bolle: le categorie si aprono ad albero
 (`movimento` → `letto` → `forte`), **★** propone le combinazioni più usate. Stacchi il dito → salvata.
 
-![Traccia a gesto](esempi/miniapp_traccia_gesto.png)
+<img src="esempi/miniapp_traccia_gesto.png" width="360" alt="Traccia a gesto">
+
+### Tre microfoni = triangolazione
+
+Due telefoni e il PC registrano insieme: misurando **quando lo stesso suono arriva a ciascuno**, si sincronizzano
+i picchi e si capisce **da dove viene** (il russare dal letto, il traffico dalla finestra).
+
+| | |
+|---|---|
+| ![Scena 3D misurata col suono](esempi/triangolazione/1_scena_3d.png) | ![Dove localizzo bene un russare](esempi/triangolazione/mappa_precisione.png) |
+| ![Picchi: diretto + eco](esempi/triangolazione/2_onde_distruttive.png) | ![Posizioni trovate](esempi/triangolazione/5_animazione_fine.png) |
+
+![Animazione: le posizioni si assestano](esempi/triangolazione/5_animazione.gif)
+
+([video mp4](esempi/triangolazione/5_animazione.mp4))
+
+La disposizione vera, durante una calibrazione (schermo ed etichette sfocati):
+
+<img src="esempi/foto_dispositivi.jpg" width="520" alt="Telefoni e PC durante una calibrazione">
+
+### Analisi della notte (schede del concept, notti finte)
+
+| | | |
+|---|---|---|
+| ![Mattino](esempi/concept/mattino_A.png) | ![Mattino storto](esempi/concept/mattino_B.png) | ![Trend 30 notti](esempi/concept/trend_30.png) |
+| ![Trend 7 notti](esempi/concept/trend_7.png) | ![Confronto](esempi/concept/confronto.png) | ![Stato](esempi/concept/mondo_stato_pausa.png) |
 
 ## Cosa manca / cosa va testato
 
