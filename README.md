@@ -27,16 +27,10 @@ riascoltare la notte sullo spettrogramma ed etichettare i suoni in pochi secondi
 
 ![Grafo dei guasti](esempi/grafo_guasti.png)
 
-### La Mini App sul telefono
-
-<img src="esempi/miniapp_spettrogramma.png" width="360" alt="Mini App"> <img src="esempi/miniapp_pannello.png" width="360" alt="Pannello etichette">
-
 ### Etichette a gesto ("come la scrittura a scorrimento della tastiera")
 
 Tieni premuto **✍ traccia**, trascina il dito sulle bolle: le categorie si aprono ad albero
 (`movimento` → `letto` → `forte`), **★** propone le combinazioni più usate. Stacchi il dito → salvata.
-
-<img src="esempi/miniapp_traccia_gesto.png" width="360" alt="Traccia a gesto">
 
 ### Tre microfoni = triangolazione
 
